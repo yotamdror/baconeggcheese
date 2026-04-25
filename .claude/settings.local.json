@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(supabase functions *)",
+      "Bash(curl -s -X POST https://zpstulodssnymskvjuya.supabase.co/functions/v1/places-proxy -H 'Content-Type: application/json' -d '{\"category\":\"bec\",\"latitude\":40.7580,\"longitude\":-73.9855}')",
+      "Bash(curl -s -X POST https://zpstulodssnymskvjuya.supabase.co/functions/v1/places-proxy -H 'Content-Type: application/json' -d '{\"category\":\"bec\",\"latitude\":40.6892,\"longitude\":-73.9925}')",
+      "Bash(python3 -m json.tool)",
+      "Bash(python3 -c ' *)",
+      "Bash(xcodebuild -scheme BEC -destination 'platform=iOS Simulator,name=iPhone 16' build)",
+      "Bash(curl -s -X POST https://zpstulodssnymskvjuya.supabase.co/functions/v1/places-proxy -H 'Content-Type: application/json' -d '{\"category\":\"bagel\",\"latitude\":40.7081,\"longitude\":-73.9571}')"
+    ]
+  }
+}

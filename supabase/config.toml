@@ -1,0 +1,6 @@
+[project]
+# Set these to your Supabase project values
+# project_id = "your-project-id"
+
+[functions.places-proxy]
+verify_jwt = false  # Public endpoint — iOS app calls without user auth

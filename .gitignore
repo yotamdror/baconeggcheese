@@ -1,0 +1,12 @@
+.env.local
+.env
+*.env
+
+# Xcode
+*.xcuserstate
+xcuserdata/
+DerivedData/
+.build/
+
+# Supabase local
+supabase/.temp/
