@@ -117,9 +117,13 @@ struct MainView: View {
     let userLocation: CLLocation
     let heading: CLLocationDirection?
     @State private var selectedTab = 2
+    @State private var showDebugSheet = false
 
     var body: some View {
         ZStack(alignment: .top) {
+            ShakeDetector { showDebugSheet = true }
+                .frame(width: 0, height: 0)
+
             TabView(selection: $selectedTab) {
                 ForEach(Array(Category.allCases.enumerated()), id: \.offset) { index, category in
                     CategoryPageView(
@@ -150,6 +154,9 @@ struct MainView: View {
             .padding(.top, 8)
         }
         .background(Color.bg)
+        .sheet(isPresented: $showDebugSheet) {
+            DebugSheetView(userLocation: userLocation, heading: heading)
+        }
     }
 }
 
