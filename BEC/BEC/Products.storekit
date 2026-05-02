@@ -1,0 +1,28 @@
+{
+  "identifier" : "BEC",
+  "nonConsumableProducts" : [],
+  "consumableProducts" : [
+    {
+      "displayPrice" : "1.99",
+      "familySharable" : false,
+      "internalID" : "bec_tip_coffee_001",
+      "localizations" : [
+        {
+          "description" : "Support the developer. Optional but appreciated.",
+          "displayName" : "Buy Me a Coffee",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "bec.tip.coffee",
+      "referenceName" : "Coffee Tip",
+      "type" : "Consumable"
+    }
+  ],
+  "autoRenewableSubscriptions" : [],
+  "nonRenewingSubscriptions" : [],
+  "settings" : {},
+  "version" : {
+    "major" : 2,
+    "minor" : 0
+  }
+}

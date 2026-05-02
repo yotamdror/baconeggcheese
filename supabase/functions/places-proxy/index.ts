@@ -11,7 +11,9 @@ const FIELD_MASK = [
   "places.location",
   "places.rating",
   "places.currentOpeningHours.openNow",
+  "places.currentOpeningHours.periods",
   "places.regularOpeningHours.openNow",
+  "places.regularOpeningHours.periods",
   "places.priceLevel",
   "places.googleMapsUri",
   "places.reviews",
@@ -27,6 +29,68 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Returns "closes 11pm" or "opens 7am" using NYC local time and the place's period data.
+function computeHoursLabel(openingHours: Record<string, unknown> | null | undefined): string | null {
+  if (!openingHours) return null;
+  const openNow = openingHours.openNow as boolean | undefined;
+  const periods = openingHours.periods as Array<{
+    open?: { day: number; hour: number; minute: number };
+    close?: { day: number; hour: number; minute: number };
+  }> | undefined;
+  if (!periods?.length) return null;
+
+  // Current NYC time components
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    weekday: "long",
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false,
+  }).formatToParts(now);
+  const dayNames: Record<string, number> = {
+    Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3,
+    Thursday: 4, Friday: 5, Saturday: 6,
+  };
+  const currentDay = dayNames[parts.find((p) => p.type === "weekday")?.value ?? "Sunday"] ?? 0;
+  const currentHour = parseInt(parts.find((p) => p.type === "hour")?.value ?? "0") % 24;
+  const currentMin = parseInt(parts.find((p) => p.type === "minute")?.value ?? "0");
+  const currentMins = currentHour * 60 + currentMin;
+
+  const fmt = (hour: number, minute: number): string => {
+    const suffix = hour < 12 ? "am" : "pm";
+    const h = hour % 12 || 12;
+    return minute === 0 ? `${h}${suffix}` : `${h}:${minute.toString().padStart(2, "0")}${suffix}`;
+  };
+
+  if (openNow) {
+    for (const period of periods) {
+      if (!period.close) return null; // 24/7
+      const { day: od, hour: oh, minute: om } = period.open ?? { day: 0, hour: 0, minute: 0 };
+      const { day: cd, hour: ch, minute: cm } = period.close;
+      const openMins = oh * 60 + om;
+      const closeMins = ch * 60 + cm;
+      const active =
+        (od === cd && od === currentDay && currentMins >= openMins && currentMins < closeMins) ||
+        (od !== cd && od === currentDay && currentMins >= openMins) ||
+        (od !== cd && cd === currentDay && currentMins < closeMins);
+      if (active) return `closes ${fmt(ch, cm)}`;
+    }
+    return null;
+  } else {
+    for (let offset = 0; offset <= 7; offset++) {
+      const checkDay = (currentDay + offset) % 7;
+      for (const period of periods) {
+        if ((period.open?.day ?? 0) !== checkDay) continue;
+        const openMins = (period.open?.hour ?? 0) * 60 + (period.open?.minute ?? 0);
+        if (offset === 0 && openMins <= currentMins) continue;
+        return `opens ${fmt(period.open!.hour, period.open!.minute)}`;
+      }
+    }
+    return null;
+  }
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -54,11 +118,16 @@ serve(async (req) => {
       : await searchByType(category, latitude, longitude);
 
     const keywords = REVIEW_KEYWORDS[category] ?? [];
-    const places = (data.places ?? []).map((place: Record<string, unknown>) => ({
-      ...place,
-      highlightedReview: pickReview(place.reviews, keywords),
-      reviews: undefined, // strip raw reviews from response
-    }));
+    const places = (data.places ?? [])
+      .map((place: Record<string, unknown>) => ({
+        ...place,
+        hoursLabel: computeHoursLabel(
+          (place.currentOpeningHours ?? place.regularOpeningHours) as Record<string, unknown> | null,
+        ),
+        highlightedReview: pickReview(place.reviews, keywords),
+        reviews: undefined,
+      }))
+      .filter((place) => place.highlightedReview !== null);
 
     logUsageEvent({ category, latitude, longitude, resultCount: places.length });
 

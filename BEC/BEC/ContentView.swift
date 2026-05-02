@@ -1,193 +1,735 @@
 import SwiftUI
 import CoreLocation
+import UIKit
+
+// MARK: - Design System
+
+private extension Color {
+    static let bg        = Color(red: 14/255,  green: 12/255,  blue: 10/255)   // #0e0c0a
+    static let drawerBg  = Color(red: 26/255,  green: 23/255,  blue: 20/255)   // #1a1714
+    static let textMain  = Color(red: 245/255, green: 244/255, blue: 242/255)  // #f5f4f2
+    static let textMuted = Color(red: 107/255, green: 100/255, blue: 96/255)   // #6b6460
+    static let textDim   = Color(red: 58/255,  green: 54/255,  blue: 48/255)   // #3a3630
+    static let divider   = Color.white.opacity(0.07)
+}
+
+// MTA subway line colors — per category
+private extension Category {
+    var accentColor: Color {
+        switch self {
+        case .pizza: return Color(red: 238/255, green: 53/255,  blue: 46/255)  // 1/2/3
+        case .bagel: return Color(red: 255/255, green: 99/255,  blue: 25/255)  // B/D/F/M
+        case .bec:   return Color(red: 0,       green: 57/255,  blue: 166/255) // A/C/E
+        }
+    }
+
+    var accentHex: String {
+        switch self {
+        case .pizza: return "EE352E"
+        case .bagel: return "FF6319"
+        case .bec:   return "0039A6"
+        }
+    }
+}
+
+// MARK: - Root
 
 struct ContentView: View {
     @StateObject private var locationManager = LocationManager()
+    @StateObject private var tipStore = TipStore()
 
     var body: some View {
-        Group {
+        ZStack {
+            Color.bg.ignoresSafeArea()
             switch locationManager.authorizationStatus {
             case .notDetermined:
                 PermissionView { locationManager.requestPermission() }
             case .denied, .restricted:
-                MessageView(text: "Only way to find the closest bite is to know where you are first")
+                NoLocationView()
             default:
                 if let loc = locationManager.location {
-                    MainView(userLocation: loc)
+                    MainView(userLocation: loc, heading: locationManager.heading)
                 } else {
-                    ProgressView("Finding you...")
+                    ProgressView().tint(Color.textMain)
                 }
             }
         }
         .animation(.default, value: locationManager.authorizationStatus)
+        .environmentObject(tipStore)
     }
 }
 
-// MARK: - Permission screen
+// MARK: - Permission
 
 struct PermissionView: View {
     let onRequest: () -> Void
 
     var body: some View {
-        VStack(spacing: 32) {
-            Text("🥓🥚🧀")
-                .font(.system(size: 80))
-            Text("Only way to find the closest bite is to know where you are first")
-                .font(.title3)
+        VStack(spacing: 0) {
+            Spacer()
+            Image("bec-icon")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 140, height: 140)
+                .padding(.bottom, 40)
+            Text("Only way to find the\nclosest bite is to know\nwhere you are first")
+                .font(.system(.title2, design: .serif, weight: .medium))
+                .foregroundStyle(Color.textMain)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
-            Button("Share My Location", action: onRequest)
-                .buttonStyle(.borderedProminent)
+            Spacer()
+            Button(action: onRequest) {
+                Text("SHARE MY LOCATION")
+                    .font(.system(.subheadline, weight: .black))
+                    .tracking(2)
+                    .foregroundStyle(Color.bg)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(Category.bec.accentColor)
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 52)
         }
     }
 }
 
-// MARK: - Generic message (denied location, no results)
+// MARK: - No Location
 
-struct MessageView: View {
-    let text: String
-
+struct NoLocationView: View {
     var body: some View {
-        VStack(spacing: 24) {
-            Text("🗺️")
-                .font(.system(size: 64))
-            Text(text)
-                .font(.title3)
+        VStack(spacing: 16) {
+            Text("NO LOCATION")
+                .font(.system(.caption, weight: .black))
+                .tracking(4)
+                .foregroundStyle(Category.bec.accentColor)
+            Text("Only way to find the closest bite is to know where you are first")
+                .font(.system(.title3, design: .serif, weight: .medium))
+                .foregroundStyle(Color.textMain.opacity(0.6))
                 .multilineTextAlignment(.center)
-                .foregroundStyle(.secondary)
                 .padding(.horizontal, 40)
         }
     }
 }
 
-// MARK: - Main swipe view (3 categories)
+// MARK: - Main
 
 struct MainView: View {
     let userLocation: CLLocation
-    @State private var selectedTab = 2 // Start on BEC
+    let heading: CLLocationDirection?
+    @State private var selectedTab = 2
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            ForEach(Array(Category.allCases.enumerated()), id: \.offset) { index, category in
-                CategoryPageView(category: category, userLocation: userLocation)
+        ZStack(alignment: .top) {
+            TabView(selection: $selectedTab) {
+                ForEach(Array(Category.allCases.enumerated()), id: \.offset) { index, category in
+                    CategoryPageView(
+                        category: category,
+                        userLocation: userLocation,
+                        heading: heading
+                    )
                     .tag(index)
+                }
             }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .ignoresSafeArea()
+
+            // 6px dots — active glows in category accent color
+            HStack(spacing: 8) {
+                ForEach(Array(Category.allCases.enumerated()), id: \.offset) { idx, cat in
+                    Circle()
+                        .fill(idx == selectedTab ? cat.accentColor : Color.textDim)
+                        .frame(width: 6, height: 6)
+                        .shadow(
+                            color: idx == selectedTab ? cat.accentColor.opacity(0.6) : .clear,
+                            radius: 3
+                        )
+                        .animation(.easeInOut(duration: 0.3), value: selectedTab)
+                        .onTapGesture { selectedTab = idx }
+                }
+            }
+            .padding(.top, 8)
         }
-        .tabViewStyle(.page(indexDisplayMode: .always))
-        .ignoresSafeArea()
+        .background(Color.bg)
     }
 }
 
-// MARK: - Per-category page
+// MARK: - Star Rating
+
+struct StarRatingView: View {
+    let rating: Double
+    let color: Color
+
+    private var filled: Int { min(5, max(0, Int(rating.rounded()))) }
+
+    var body: some View {
+        HStack(spacing: 3) {
+            ForEach(0..<5, id: \.self) { i in
+                Image(systemName: i < filled ? "star.fill" : "star")
+                    .font(.system(size: 9))
+                    .foregroundStyle(i < filled ? color : Color.textDim)
+            }
+        }
+    }
+}
+
+// MARK: - Arrow
+
+struct ArrowView: View {
+    let bearing: Double
+    let color: Color
+
+    var body: some View {
+        Canvas { ctx, size in
+            let cx = size.width / 2
+
+            var shaft = Path()
+            shaft.move(to: CGPoint(x: cx, y: size.height * 0.89))
+            shaft.addLine(to: CGPoint(x: cx, y: size.height * 0.22))
+            ctx.stroke(shaft, with: .color(color),
+                       style: StrokeStyle(lineWidth: 5, lineCap: .round))
+
+            var head = Path()
+            head.move(to:    CGPoint(x: size.width * 0.27, y: size.height * 0.47))
+            head.addLine(to: CGPoint(x: cx,                y: size.height * 0.19))
+            head.addLine(to: CGPoint(x: size.width * 0.73, y: size.height * 0.47))
+            ctx.stroke(head, with: .color(color),
+                       style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+        }
+        .frame(width: 64, height: 64)
+        .rotationEffect(.degrees(bearing))
+        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: bearing)
+    }
+}
+
+// MARK: - Mini Map
+
+struct MiniMapView: View {
+    let place: Place
+    let userLocation: CLLocation
+    let category: Category
+
+    @State private var mapImage: UIImage?
+
+    private var accentColor: Color { category.accentColor }
+    private var walkMins: Int { place.walkingMinutes(from: userLocation) }
+    private var cardinal: String { place.cardinalDirection(from: userLocation) }
+
+    var body: some View {
+        ZStack {
+            if let image = mapImage {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                placeholder
+            }
+
+            // Gradient fades (match drawer bg)
+            VStack(spacing: 0) {
+                LinearGradient(colors: [Color.drawerBg, .clear], startPoint: .top, endPoint: .bottom)
+                    .frame(height: 36)
+                Spacer()
+                LinearGradient(colors: [.clear, Color.drawerBg], startPoint: .top, endPoint: .bottom)
+                    .frame(height: 36)
+            }
+
+        }
+        .frame(height: 130)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.07), lineWidth: 1))
+        .task(id: place.id) { await fetchMap() }
+    }
+
+    // Canvas placeholder shown while the real tile loads
+    private var placeholder: some View {
+        Canvas { ctx, size in
+            let basemap = Color(red: 13/255, green: 15/255, blue: 20/255)
+            ctx.fill(Path(CGRect(origin: .zero, size: size)), with: .color(basemap))
+
+            let streetColor = Color(red: 28/255, green: 33/255, blue: 48/255)
+            for y in stride(from: CGFloat(18), through: size.height, by: 34) {
+                var p = Path(); p.move(to: CGPoint(x: 0, y: y)); p.addLine(to: CGPoint(x: size.width, y: y))
+                ctx.stroke(p, with: .color(streetColor), lineWidth: 1.5)
+            }
+            for x in stride(from: CGFloat(28), through: size.width, by: 44) {
+                var p = Path(); p.move(to: CGPoint(x: x, y: 0)); p.addLine(to: CGPoint(x: x, y: size.height))
+                ctx.stroke(p, with: .color(streetColor), lineWidth: 1.5)
+            }
+            var route = Path()
+            route.move(to: CGPoint(x: size.width * 0.83, y: size.height * 0.78))
+            route.addCurve(
+                to: CGPoint(x: size.width * 0.50, y: size.height * 0.50),
+                control1: CGPoint(x: size.width * 0.83, y: size.height * 0.54),
+                control2: CGPoint(x: size.width * 0.64, y: size.height * 0.50)
+            )
+            ctx.stroke(route, with: .color(accentColor), style: StrokeStyle(lineWidth: 3, lineCap: .round))
+        }
+    }
+
+    private func fetchMap() async {
+        let url = URL(string: "https://zpstulodssnymskvjuya.supabase.co/functions/v1/maps-proxy")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try? JSONSerialization.data(withJSONObject: [
+            "originLat": userLocation.coordinate.latitude,
+            "originLng": userLocation.coordinate.longitude,
+            "destLat":   place.location.latitude,
+            "destLng":   place.location.longitude,
+            "colorHex":  category.accentHex,
+        ])
+
+        guard let (data, resp) = try? await URLSession.shared.data(for: req),
+              (resp as? HTTPURLResponse)?.statusCode == 200,
+              let image = UIImage(data: data) else { return }
+
+        await MainActor.run { mapImage = image }
+    }
+}
+
+// MARK: - Category Page
 
 struct CategoryPageView: View {
     let category: Category
     let userLocation: CLLocation
+    let heading: CLLocationDirection?
 
     @State private var places: [Place] = []
     @State private var isLoading = true
     @State private var showTopFive = false
+    @State private var directionsResult: DirectionsResult?
+    @State private var selectedPlace: Place?
+
+    private var currentPlace: Place? { selectedPlace ?? places.first }
+
+    private let peekH: CGFloat = 96
+    private var accentColor: Color { category.accentColor }
 
     var locationKey: String {
         String(format: "%.3f,%.3f", userLocation.coordinate.latitude, userLocation.coordinate.longitude)
     }
 
     var body: some View {
+        ZStack(alignment: .bottom) {
+            Color.bg.ignoresSafeArea()
+
+            if isLoading {
+                loadingView
+                    .padding(.bottom, peekH)
+            } else if let closest = currentPlace {
+                loadedView(closest)
+                    .padding(.bottom, peekH)
+
+                DrawerView(
+                    place: closest,
+                    userLocation: userLocation,
+                    category: category,
+                    accentColor: accentColor,
+                    directionsResult: directionsResult,
+                    onShowMore: { showTopFive = true }
+                )
+                .id("\(category.id)-\(closest.id)")
+            } else {
+                noResultsView
+                    .padding(.bottom, peekH)
+            }
+        }
+        .task(id: locationKey) { await load() }
+        .sheet(isPresented: $showTopFive) {
+            TopFiveView(places: places, userLocation: userLocation, category: category, onSelectPlace: selectPlace)
+        }
+    }
+
+    private func displayBearing(for place: Place) -> Double {
+        let absolute = place.bearing(from: userLocation)
+        guard let h = heading else { return absolute }
+        return (absolute - h + 360).truncatingRemainder(dividingBy: 360)
+    }
+
+    @ViewBuilder
+    private func loadedView(_ place: Place) -> some View {
+        let mins = directionsResult?.durationMinutes ?? place.walkingMinutes(from: userLocation)
+
         VStack(spacing: 0) {
+            Spacer(minLength: 0)
+
+            // Hero emoji / icon
             Group {
                 if category == .bec {
                     Image("bec-icon")
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 120, height: 120)
+                        .frame(maxWidth: 160, maxHeight: 160)
                 } else {
                     Text(category.emoji)
-                        .font(.system(size: 64))
+                        .font(.system(size: 130))
+                        .lineLimit(1)
                 }
             }
-            .padding(.top, 80)
+            .id(category.id)
+            .transition(.scale(scale: 0.5).combined(with: .opacity))
+            .frame(maxWidth: .infinity)
 
-            Spacer()
+            Spacer(minLength: 0)
 
-            if isLoading {
-                ProgressView()
-            } else if let closest = places.first {
-                PlaceCardView(place: closest, userLocation: userLocation)
-                    .padding(.horizontal, 24)
-            } else {
-                MessageView(text: "Nowhere within a 15 min walk!\nAre you sure you're in NYC?")
+            // Arrow + walk time + direction
+            HStack(alignment: .center, spacing: 18) {
+                ArrowView(bearing: displayBearing(for: place), color: accentColor)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("\(mins)")
+                        .font(.system(size: 96, weight: .bold))
+                        .foregroundStyle(accentColor)
+                        .kerning(-4)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    Text("min walk")
+                        .font(.system(size: 10, weight: .bold))
+                        .tracking(3.5)
+                        .foregroundStyle(accentColor.opacity(0.55))
+                    Text(place.cardinalDirection(from: userLocation).uppercased())
+                        .font(.system(size: 24, weight: .black))
+                        .tracking(3)
+                        .foregroundStyle(accentColor)
+                        .padding(.top, 2)
+                }
             }
+            .padding(.horizontal, 32)
 
-            Spacer()
+            Spacer(minLength: 0)
 
-            if places.count > 1 {
-                Button("See the other closest options") { showTopFive = true }
-                    .padding(.bottom, 48)
+            // Place name + address
+            VStack(spacing: 4) {
+                Text(place.name.uppercased())
+                    .font(.system(size: 18, weight: .bold))
+                    .tracking(0.5)
+                    .foregroundStyle(Color.textMain)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                Text({
+                    let status = place.isOpen ? "OPEN" : "CLOSED"
+                    if let label = place.hoursLabel { return "\(status) · \(label)" }
+                    return status
+                }())
+                    .font(.system(size: 11, weight: .semibold))
+                    .tracking(2)
+                    .foregroundStyle(place.isOpen ? accentColor.opacity(0.75) : Color.textMuted)
+                    .lineLimit(1)
+                if let rating = place.rating {
+                    StarRatingView(rating: rating, color: accentColor)
+                        .padding(.top, 2)
+                }
             }
+            .padding(.horizontal, 24)
+
+            Spacer(minLength: 0)
         }
-        .task(id: locationKey) { await load() }
-        .sheet(isPresented: $showTopFive) {
-            TopFiveView(places: places, userLocation: userLocation, category: category)
+    }
+
+    private var loadingView: some View {
+        VStack(spacing: 0) {
+            Spacer()
+            Group {
+                if category == .bec {
+                    Image("bec-icon")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: 140, maxHeight: 140)
+                } else {
+                    Text(category.emoji)
+                        .font(.system(size: 120))
+                }
+            }
+            Spacer()
+            Text(category.loadingText)
+                .font(.system(.subheadline).italic())
+                .foregroundStyle(Color.textMuted)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var noResultsView: some View {
+        VStack(spacing: 16) {
+            Text("NOWHERE NEARBY")
+                .font(.system(.caption, weight: .black))
+                .tracking(4)
+                .foregroundStyle(accentColor)
+            Text("Nothing within a 15 min walk.")
+                .font(.system(.body, design: .serif))
+                .foregroundStyle(Color.textMain.opacity(0.5))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func selectPlace(_ place: Place) {
+        selectedPlace = place
+        showTopFive = false
+        directionsResult = nil
+        Task {
+            let result = await DirectionsService.fetch(origin: userLocation, destination: place)
+            await MainActor.run { directionsResult = result }
         }
     }
 
     private func load() async {
         isLoading = true
+        directionsResult = nil
+        selectedPlace = nil
         places = (try? await PlacesService.fetch(category: category, location: userLocation)) ?? []
-        isLoading = false
+        await MainActor.run {
+            withAnimation(.spring(response: 0.42, dampingFraction: 0.75)) {
+                isLoading = false
+            }
+            if !places.isEmpty {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            }
+        }
+        if let closest = places.first {
+            let result = await DirectionsService.fetch(origin: userLocation, destination: closest)
+            await MainActor.run { directionsResult = result }
+        }
     }
 }
 
-// MARK: - Place card
+// MARK: - Drawer
 
-struct PlaceCardView: View {
+struct DrawerView: View {
     let place: Place
     let userLocation: CLLocation
+    let category: Category
+    let accentColor: Color
+    let directionsResult: DirectionsResult?
+    let onShowMore: () -> Void
+
+    @EnvironmentObject private var tipStore: TipStore
+
+    private let peekH:   CGFloat = 96
+    private let drawerH: CGFloat = 510
+    private var closedY: CGFloat { drawerH - peekH }
+
+    @State private var targetOffset: CGFloat = 414  // drawerH - peekH
+    @State private var isOpen = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(place.name)
-                .font(.title2.bold())
-                .fixedSize(horizontal: false, vertical: true)
+        VStack(spacing: 0) {
+            // Handle bar
+            Capsule()
+                .fill(Color.white.opacity(0.1))
+                .frame(width: 36, height: 3)
+                .padding(.top, 10)
+                .padding(.bottom, 6)
 
-            if let address = place.formattedAddress {
-                Text(address)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-            }
-
-            HStack(spacing: 16) {
-                Label("~\(place.walkingMinutes(from: userLocation)) min walk", systemImage: "figure.walk")
-                if let rating = place.rating {
-                    Text(String(format: "%.1f ⭐", rating))
+            // Peek row
+            Button(action: toggle) {
+                HStack {
+                    Text(place.formattedAddress ?? "")
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(Color.textMuted)
+                        .lineLimit(1)
+                    Spacer()
+                    Text("▲")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.textMuted.opacity(0.4))
+                        .rotationEffect(.degrees(isOpen ? 180 : 0))
+                        .animation(.easeInOut(duration: 0.3), value: isOpen)
                 }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 10)
+                .padding(.bottom, 4)
             }
-            .font(.headline)
 
-            if let review = place.highlightedReview {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("\"\(review.text)\"")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .italic()
-                    Text("— \(review.author)")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
+            Color.divider.frame(height: 1)
+
+            // Expanded content
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 0) {
+                    expandedContent
                 }
-                .padding(.top, 2)
+                .padding(.bottom, 40)
             }
-
-            Button(action: navigate) {
-                Label("Navigate", systemImage: "map.fill")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .padding(.top, 4)
+            .opacity(isOpen ? 1 : 0)
+            .disabled(!isOpen)
         }
-        .padding(20)
-        .background(.regularMaterial)
-        .cornerRadius(16)
+        .frame(height: drawerH)
+        .background(Color.drawerBg)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        // Full-width MTA line bar at top edge
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(accentColor)
+                .frame(height: 3)
+        }
+        .shadow(color: .black.opacity(0.5), radius: 40, y: -8)
+        .offset(y: targetOffset)
+        .gesture(
+            DragGesture(minimumDistance: 8)
+                .onChanged { value in
+                    guard abs(value.translation.height) > abs(value.translation.width) else { return }
+                    let base: CGFloat = isOpen ? 0 : closedY
+                    withTransaction(Transaction(animation: nil)) {
+                        targetOffset = max(0, min(closedY, base + value.translation.height))
+                    }
+                }
+                .onEnded { value in
+                    let dy = value.translation.height
+                    withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) {
+                        if !isOpen && dy < -60 {
+                            isOpen = true; targetOffset = 0
+                        } else if isOpen && dy > 60 {
+                            isOpen = false; targetOffset = closedY
+                        } else {
+                            targetOffset = isOpen ? 0 : closedY
+                        }
+                    }
+                }
+        )
+    }
+
+    @ViewBuilder
+    private var expandedContent: some View {
+        sectionHeader("Word on the street")
+
+        // Review
+        if let review = place.highlightedReview {
+            VStack(alignment: .leading, spacing: 5) {
+                Text("\u{201C}\(review.text)\u{201D}")
+                    .font(.system(size: 13).italic())
+                    .foregroundStyle(Color.textMuted)
+                    .lineSpacing(4)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("— \(review.author.uppercased())")
+                    .font(.system(size: 10, weight: .regular))
+                    .tracking(2)
+                    .foregroundStyle(Color.textDim)
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 20)
+        }
+
+        // Mini map — tap to navigate
+        Button(action: navigate) {
+            VStack(alignment: .leading, spacing: 6) {
+                MiniMapView(
+                    place: place,
+                    userLocation: userLocation,
+                    category: category
+                )
+                .padding(.horizontal, 24)
+
+                Text({
+                    let mins = directionsResult?.durationMinutes ?? place.walkingMinutes(from: userLocation)
+                    let fallback = "\(mins) min walk · \(place.cardinalDirection(from: userLocation))"
+                    if FeatureFlags.blockCalculator && LocationManager.isInManhattan(userLocation),
+                       let desc = directionsResult?.blockDescription, !desc.isEmpty {
+                        return desc
+                    }
+                    return fallback
+                }())
+                    .font(.system(size: 10, weight: .bold))
+                    .tracking(2.5)
+                    .foregroundStyle(accentColor.opacity(0.6))
+                    .padding(.horizontal, 24)
+
+            }
+        }
+        .buttonStyle(.plain)
+        .padding(.bottom, 4)
+
+        Button(action: onShowMore) {
+            Text("Show more")
+                .font(.system(size: 10, weight: .bold))
+                .tracking(3)
+                .foregroundStyle(Color.textMuted.opacity(0.45))
+                .textCase(.uppercase)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.vertical, 14)
+        }
+
+        settingsSection
+    }
+
+    @ViewBuilder
+    private func sectionHeader(_ label: String) -> some View {
+        HStack(spacing: 10) {
+            Color.divider.frame(height: 1)
+            Text(label.uppercased())
+                .font(.system(size: 9, weight: .bold))
+                .tracking(3)
+                .foregroundStyle(Color.textDim)
+                .fixedSize()
+            Color.divider.frame(height: 1)
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 16)
+        .padding(.bottom, 12)
+    }
+
+    @ViewBuilder
+    private var settingsSection: some View {
+        Color.divider.frame(height: 1)
+
+        settingRow("💬", "Feedback",        "Complaints filed in order of spiciness.",
+                   bg: Color(red: 232/255, green: 93/255, blue: 4/255).opacity(0.1),
+                   action: openFeedback)
+        settingRow(
+            "☕",
+            tipStore.purchased ? "Thank you ☕" : "Buy me a coffee",
+            tipStore.purchased ? "You're the best. Really." :
+                tipStore.isPurchasing ? "Opening…" : "Support the developer. Optional but appreciated.",
+            bg: Color(red: 212/255, green: 43/255, blue: 39/255).opacity(0.1),
+            action: tipStore.purchased || tipStore.isPurchasing ? nil : { Task { await tipStore.purchase() } }
+        )
+    }
+
+    private func settingRow(_ icon: String, _ label: String, _ sub: String, bg: Color, action: (() -> Void)? = nil) -> some View {
+        VStack(spacing: 0) {
+            Button(action: { action?() }) {
+                HStack(spacing: 14) {
+                    Text(icon)
+                        .font(.system(size: 16))
+                        .frame(width: 34, height: 34)
+                        .background(bg)
+                        .cornerRadius(8)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(label)
+                            .font(.system(size: 14, weight: .semibold))
+                            .tracking(0.1)
+                            .foregroundStyle(Color.textMain)
+                        Text(sub)
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.textMuted)
+                    }
+                    Spacer()
+                    Text("›")
+                        .font(.system(size: 14))
+                        .foregroundStyle(action != nil ? Color.textMuted.opacity(0.3) : .clear)
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 13)
+            }
+            .buttonStyle(.plain)
+            .disabled(action == nil)
+            Color.divider.frame(height: 1)
+        }
+    }
+
+    private func openFeedback() {
+        let address = "yotamedror@gmail.com"
+        let subject = "BEC App Feedback".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        if let url = URL(string: "mailto:\(address)?subject=\(subject)") {
+            UIApplication.shared.open(url)
+        }
+    }
+
+    private func toggle() {
+        withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) {
+            isOpen.toggle()
+            targetOffset = isOpen ? 0 : closedY
+        }
     }
 
     private func navigate() {
@@ -195,8 +737,7 @@ struct PlaceCardView: View {
         let lng = place.location.longitude
         let q = place.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         let googleURL = URL(string: "comgooglemaps://?q=\(q)&center=\(lat),\(lng)")!
-        let appleURL = URL(string: "maps://?ll=\(lat),\(lng)&q=\(q)")!
-
+        let appleURL  = URL(string: "maps://?ll=\(lat),\(lng)&q=\(q)")!
         if UIApplication.shared.canOpenURL(googleURL) {
             UIApplication.shared.open(googleURL)
         } else {
@@ -205,60 +746,83 @@ struct PlaceCardView: View {
     }
 }
 
-// MARK: - Top 5 list
+// MARK: - Top Five — MTA timetable style
 
 struct TopFiveView: View {
     let places: [Place]
     let userLocation: CLLocation
     let category: Category
+    let onSelectPlace: (Place) -> Void
     @Environment(\.dismiss) private var dismiss
+
+    private var accentColor: Color { category.accentColor }
 
     var body: some View {
         NavigationStack {
-            List(Array(places.prefix(5))) { place in
-                Button(action: { navigate(to: place) }) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(place.name).font(.headline)
-                            if let addr = place.formattedAddress {
-                                Text(addr).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            ZStack {
+                Color.bg.ignoresSafeArea()
+                List(Array(places.prefix(5))) { place in
+                    Button(action: { onSelectPlace(place) }) {
+                        HStack(alignment: .center, spacing: 12) {
+                            // MTA line dot
+                            Circle()
+                                .fill(accentColor)
+                                .frame(width: 10, height: 10)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(place.name)
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .tracking(0.1)
+                                    .foregroundStyle(Color.textMain)
+                                    .lineLimit(1)
+                                if let addr = place.formattedAddress {
+                                    Text(addr)
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(Color.textMuted)
+                                        .lineLimit(1)
+                                }
+                                if let rating = place.rating {
+                                    StarRatingView(rating: rating, color: accentColor)
+                                }
+                            }
+
+                            Spacer()
+
+                            VStack(alignment: .trailing, spacing: 0) {
+                                Text("\(place.walkingMinutes(from: userLocation))")
+                                    .font(.system(size: 28, weight: .bold))
+                                    .foregroundStyle(accentColor)
+                                    .kerning(-1)
+                                Text("min")
+                                    .font(.system(size: 8, weight: .bold))
+                                    .tracking(2.5)
+                                    .foregroundStyle(accentColor.opacity(0.55))
+                                    .textCase(.uppercase)
                             }
                         }
-                        Spacer()
-                        VStack(alignment: .trailing, spacing: 4) {
-                            Text("~\(place.walkingMinutes(from: userLocation)) min")
-                                .font(.subheadline.bold())
-                            if let r = place.rating {
-                                Text(String(format: "%.1f ⭐", r)).font(.caption)
-                            }
-                        }
+                        .padding(.vertical, 6)
                     }
-                    .padding(.vertical, 4)
+                    .listRowBackground(Color.bg)
+                    .listRowSeparatorTint(Color.white.opacity(0.07))
                 }
-                .foregroundStyle(.primary)
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
             }
-            .navigationTitle("Closest Options \(category.emoji)")
+            .navigationTitle("More options nearby")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
+                        .font(.system(size: 11, weight: .bold))
+                        .tracking(2)
+                        .textCase(.uppercase)
+                        .foregroundStyle(accentColor)
                 }
             }
         }
     }
 
-    private func navigate(to place: Place) {
-        let lat = place.location.latitude
-        let lng = place.location.longitude
-        let q = place.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        let googleURL = URL(string: "comgooglemaps://?q=\(q)&center=\(lat),\(lng)")!
-        let appleURL = URL(string: "maps://?ll=\(lat),\(lng)&q=\(q)")!
-
-        if UIApplication.shared.canOpenURL(googleURL) {
-            UIApplication.shared.open(googleURL)
-        } else {
-            UIApplication.shared.open(appleURL)
-        }
-    }
 }
 
 #Preview {

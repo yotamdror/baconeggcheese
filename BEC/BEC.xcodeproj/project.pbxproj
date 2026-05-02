@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		787C1ACC2FA653FE00D99C03 /* bec.tip.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 787C1ACB2FA653FE00D99C03 /* bec.tip.storekit */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		7894EE282F9D53C600668DC9 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -24,6 +28,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		787C1ACB2FA653FE00D99C03 /* bec.tip.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = bec.tip.storekit; sourceTree = "<group>"; };
 		7894EE172F9D53C200668DC9 /* BEC.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BEC.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7894EE272F9D53C600668DC9 /* BECTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BECTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7894EE312F9D53C600668DC9 /* BECUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BECUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -75,6 +80,7 @@
 		7894EE0E2F9D53C200668DC9 = {
 			isa = PBXGroup;
 			children = (
+				787C1ACB2FA653FE00D99C03 /* bec.tip.storekit */,
 				7894EE192F9D53C200668DC9 /* BEC */,
 				7894EE2A2F9D53C600668DC9 /* BECTests */,
 				7894EE342F9D53C600668DC9 /* BECUITests */,
@@ -212,6 +218,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				787C1ACC2FA653FE00D99C03 /* bec.tip.storekit in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -396,6 +403,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"BEC/Preview Content\"";
+				DEVELOPMENT_TEAM = 75PCHQHB7R;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
@@ -426,6 +434,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"BEC/Preview Content\"";
+				DEVELOPMENT_TEAM = 75PCHQHB7R;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
