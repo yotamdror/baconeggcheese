@@ -296,9 +296,9 @@ struct CategoryPageView: View {
 
     @State private var places: [Place] = []
     @State private var isLoading = true
-    @State private var showTopFive = false
     @State private var directionsResult: DirectionsResult?
     @State private var selectedPlace: Place?
+    @State private var drawerOpen = false
 
     private var currentPlace: Place? { selectedPlace ?? places.first }
 
@@ -319,25 +319,27 @@ struct CategoryPageView: View {
             } else if let closest = currentPlace {
                 loadedView(closest)
                     .padding(.bottom, peekH)
+                    .contentShape(Rectangle())
+                    .onTapGesture { if drawerOpen { drawerOpen = false } }
 
                 DrawerView(
+                    isOpen: $drawerOpen,
                     place: closest,
+                    allPlaces: places,
                     userLocation: userLocation,
                     category: category,
                     accentColor: accentColor,
                     directionsResult: directionsResult,
-                    onShowMore: { showTopFive = true }
+                    onSelectPlace: selectPlace
                 )
                 .id("\(category.id)-\(closest.id)")
+                .onChange(of: currentPlace?.id) { drawerOpen = false }
             } else {
                 noResultsView
                     .padding(.bottom, peekH)
             }
         }
         .task(id: locationKey) { await load() }
-        .sheet(isPresented: $showTopFive) {
-            TopFiveView(places: places, userLocation: userLocation, category: category, onSelectPlace: selectPlace)
-        }
     }
 
     private func displayBearing(for place: Place) -> Double {
@@ -467,7 +469,7 @@ struct CategoryPageView: View {
 
     private func selectPlace(_ place: Place) {
         selectedPlace = place
-        showTopFive = false
+        drawerOpen = false
         directionsResult = nil
         Task {
             let result = await DirectionsService.fetch(origin: userLocation, destination: place)
@@ -498,12 +500,14 @@ struct CategoryPageView: View {
 // MARK: - Drawer
 
 struct DrawerView: View {
+    @Binding var isOpen: Bool
     let place: Place
+    let allPlaces: [Place]
     let userLocation: CLLocation
     let category: Category
     let accentColor: Color
     let directionsResult: DirectionsResult?
-    let onShowMore: () -> Void
+    let onSelectPlace: (Place) -> Void
 
     @EnvironmentObject private var tipStore: TipStore
 
@@ -512,7 +516,7 @@ struct DrawerView: View {
     private var closedY: CGFloat { drawerH - peekH }
 
     @State private var targetOffset: CGFloat = 414  // drawerH - peekH
-    @State private var isOpen = false
+    @State private var reviewPage = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -565,6 +569,11 @@ struct DrawerView: View {
         }
         .shadow(color: .black.opacity(0.5), radius: 40, y: -8)
         .offset(y: targetOffset)
+        .onChange(of: isOpen) { open in
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) {
+                targetOffset = open ? 0 : closedY
+            }
+        }
         .gesture(
             DragGesture(minimumDistance: 8)
                 .onChanged { value in
@@ -591,62 +600,119 @@ struct DrawerView: View {
 
     @ViewBuilder
     private var expandedContent: some View {
-        sectionHeader("Word on the street")
+        // Directions label
+        Text({
+            let mins = directionsResult?.durationMinutes ?? place.walkingMinutes(from: userLocation)
+            let fallback = "\(mins) min walk · \(place.cardinalDirection(from: userLocation))"
+            if FeatureFlags.blockCalculator && LocationManager.isInManhattan(userLocation),
+               let desc = directionsResult?.blockDescription, !desc.isEmpty {
+                return desc
+            }
+            return fallback
+        }())
+            .font(.system(size: 18, weight: .black))
+            .tracking(0.5)
+            .foregroundStyle(accentColor)
+            .padding(.horizontal, 24)
+            .padding(.top, 16)
+            .padding(.bottom, 10)
 
-        // Review
-        if let review = place.highlightedReview {
+        // Mini map — tap to navigate
+        Button(action: navigate) {
+            MiniMapView(
+                place: place,
+                userLocation: userLocation,
+                category: category
+            )
+            .padding(.horizontal, 24)
+        }
+        .buttonStyle(.plain)
+        .padding(.bottom, 8)
+
+        // Reviews
+        let allReviews = place.reviews ?? (place.highlightedReview.map { [$0] } ?? [])
+        if !allReviews.isEmpty {
+            sectionHeader("Word on the street")
+
+            let review = allReviews[min(reviewPage, allReviews.count - 1)]
             VStack(alignment: .leading, spacing: 5) {
                 Text("\u{201C}\(review.text)\u{201D}")
                     .font(.system(size: 13).italic())
                     .foregroundStyle(Color.textMuted)
                     .lineSpacing(4)
-                    .fixedSize(horizontal: false, vertical: true)
                 Text("— \(review.author.uppercased())")
                     .font(.system(size: 10, weight: .regular))
                     .tracking(2)
                     .foregroundStyle(Color.textDim)
+
+                if allReviews.count > 1 {
+                    HStack(spacing: 5) {
+                        ForEach(0..<allReviews.count, id: \.self) { i in
+                            Circle()
+                                .fill(i == reviewPage ? accentColor : Color.textDim)
+                                .frame(width: 4, height: 4)
+                        }
+                    }
+                    .padding(.top, 6)
+                }
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 20)
-        }
-
-        // Mini map — tap to navigate
-        Button(action: navigate) {
-            VStack(alignment: .leading, spacing: 6) {
-                MiniMapView(
-                    place: place,
-                    userLocation: userLocation,
-                    category: category
-                )
-                .padding(.horizontal, 24)
-
-                Text({
-                    let mins = directionsResult?.durationMinutes ?? place.walkingMinutes(from: userLocation)
-                    let fallback = "\(mins) min walk · \(place.cardinalDirection(from: userLocation))"
-                    if FeatureFlags.blockCalculator && LocationManager.isInManhattan(userLocation),
-                       let desc = directionsResult?.blockDescription, !desc.isEmpty {
-                        return desc
+            .gesture(
+                DragGesture(minimumDistance: 20)
+                    .onEnded { value in
+                        guard abs(value.translation.width) > abs(value.translation.height) else { return }
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            if value.translation.width < 0 {
+                                reviewPage = min(reviewPage + 1, allReviews.count - 1)
+                            } else {
+                                reviewPage = max(reviewPage - 1, 0)
+                            }
+                        }
                     }
-                    return fallback
-                }())
-                    .font(.system(size: 10, weight: .bold))
-                    .tracking(2.5)
-                    .foregroundStyle(accentColor.opacity(0.6))
-                    .padding(.horizontal, 24)
-
-            }
+            )
+            .onChange(of: place.id) { reviewPage = 0 }
         }
-        .buttonStyle(.plain)
-        .padding(.bottom, 4)
 
-        Button(action: onShowMore) {
-            Text("Show more")
-                .font(.system(size: 10, weight: .bold))
-                .tracking(3)
-                .foregroundStyle(Color.textMuted.opacity(0.45))
-                .textCase(.uppercase)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.vertical, 14)
+        // Inline more options
+        let otherPlaces = allPlaces.filter { $0.id != place.id }.prefix(4)
+        if !otherPlaces.isEmpty {
+            sectionHeader("More \(category.moreLabel) nearby")
+            ForEach(Array(otherPlaces)) { other in
+                Button(action: { onSelectPlace(other) }) {
+                    HStack(alignment: .center, spacing: 12) {
+                        Circle()
+                            .fill(accentColor)
+                            .frame(width: 8, height: 8)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(other.name)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(Color.textMain)
+                                .lineLimit(1)
+                            if let addr = other.formattedAddress {
+                                Text(addr)
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(Color.textMuted)
+                                    .lineLimit(1)
+                            }
+                        }
+                        Spacer()
+                        Text("\(other.walkingMinutes(from: userLocation))")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundStyle(accentColor)
+                            .kerning(-1)
+                        Text("min")
+                            .font(.system(size: 8, weight: .bold))
+                            .tracking(2)
+                            .foregroundStyle(accentColor.opacity(0.55))
+                            .textCase(.uppercase)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 10)
+                }
+                .buttonStyle(.plain)
+                Color.divider.frame(height: 1)
+            }
         }
 
         settingsSection
@@ -726,10 +792,7 @@ struct DrawerView: View {
     }
 
     private func toggle() {
-        withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) {
-            isOpen.toggle()
-            targetOffset = isOpen ? 0 : closedY
-        }
+        isOpen.toggle()
     }
 
     private func navigate() {

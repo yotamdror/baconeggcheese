@@ -20,10 +20,19 @@ const FIELD_MASK = [
 ].join(",");
 
 const REVIEW_KEYWORDS: Record<string, string[]> = {
-  bec: ["bacon egg and cheese", "egg sandwich"],
   bagel: ["bagel"],
   pizza: ["pizza"],
 };
+
+function reviewIsRelevant(text: string, category: string): boolean {
+  const lower = text.toLowerCase();
+  if (category === "bec") return lower.includes("egg") && lower.includes("cheese");
+  return (REVIEW_KEYWORDS[category] ?? []).some((k) => lower.includes(k));
+}
+
+function wordCount(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -124,8 +133,8 @@ serve(async (req) => {
         hoursLabel: computeHoursLabel(
           (place.currentOpeningHours ?? place.regularOpeningHours) as Record<string, unknown> | null,
         ),
-        highlightedReview: pickReview(place.reviews, keywords),
-        reviews: undefined,
+        highlightedReview: pickReview(place.reviews, category),
+        reviews: pickAllReviews(place.reviews, category),
       }))
       .filter((place) => place.highlightedReview !== null);
 
@@ -182,21 +191,26 @@ async function searchByText(query: string, latitude: number, longitude: number) 
   return handlePlacesResponse(res);
 }
 
-function pickReview(reviews: unknown, keywords: string[]): { text: string; author: string } | null {
+function pickReview(reviews: unknown, category: string): { text: string; author: string } | null {
   if (!Array.isArray(reviews)) return null;
-  for (const keyword of keywords) {
-    for (const review of reviews) {
-      const text: string = review?.text?.text ?? "";
-      if (text.toLowerCase().includes(keyword.toLowerCase())) {
-        return { text: truncate(text, 120), author: review?.authorAttribution?.displayName ?? "" };
-      }
+  for (const review of reviews) {
+    const text: string = review?.text?.text ?? "";
+    if (reviewIsRelevant(text, category) && wordCount(text) <= 100) {
+      return { text, author: review?.authorAttribution?.displayName ?? "" };
     }
   }
   return null;
 }
 
-function truncate(text: string, maxLength: number): string {
-  return text.length <= maxLength ? text : text.slice(0, maxLength).trimEnd() + "…";
+function pickAllReviews(reviews: unknown, category: string, max = 5): Array<{ text: string; author: string }> {
+  if (!Array.isArray(reviews)) return [];
+  return reviews
+    .filter((r) => {
+      const text: string = r?.text?.text ?? "";
+      return reviewIsRelevant(text, category) && wordCount(text) <= 100;
+    })
+    .slice(0, max)
+    .map((r) => ({ text: r?.text?.text ?? "", author: r?.authorAttribution?.displayName ?? "" }));
 }
 
 function googleHeaders() {

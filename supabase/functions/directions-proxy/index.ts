@@ -97,13 +97,12 @@ function buildBlockDescription(steps: Array<{
     ? `${word(nsBlocks)} ${nsBlocks === 1 ? "block" : "blocks"} ${nsDir}`
     : null;
   const ewStr = ewAvenues > 0
-    ? `${word(ewAvenues)} ${ewAvenues === 1 ? "ave" : "aves"} ${ewDir}`
+    ? `${word(ewAvenues)} ${ewAvenues === 1 ? "avenue" : "avenues"} ${ewDir}`
     : null;
 
-  if (nsStr && ewStr) return `${nsStr} and ${ewStr}`;
-  if (nsStr) return nsStr;
-  if (ewStr) return ewStr;
-  return "right here";
+  const parts = [nsStr, ewStr].filter(Boolean);
+  if (parts.length === 0) return "right here";
+  return parts.join("\n");
 }
 
 function jsonError(message: string, status: number) {

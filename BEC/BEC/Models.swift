@@ -21,6 +21,14 @@ enum Category: String, CaseIterable, Identifiable {
         }
     }
 
+    var moreLabel: String {
+        switch self {
+        case .pizza: return "pizza"
+        case .bagel: return "bagels"
+        case .bec:   return "BEC"
+        }
+    }
+
     var loadingText: String {
         switch self {
         case .pizza: return "triangulating nearest cheese situation…"
@@ -45,6 +53,7 @@ struct Place: Decodable, Identifiable {
     let currentOpeningHours: Hours?
     let regularOpeningHours: Hours?
     let highlightedReview: Review?
+    let reviews: [Review]?
 
     var name: String { displayName.text }
     var isOpen: Bool {
@@ -79,14 +88,14 @@ struct Place: Decodable, Identifiable {
             }
         }
         switch b {
-        case 22.5..<67.5:   return "NE"
-        case 67.5..<112.5:  return "E"
-        case 112.5..<157.5: return "SE"
-        case 157.5..<202.5: return "S"
-        case 202.5..<247.5: return "SW"
-        case 247.5..<292.5: return "W"
-        case 292.5..<337.5: return "NW"
-        default:            return "N"
+        case 22.5..<67.5:   return "northeast"
+        case 67.5..<112.5:  return "east"
+        case 112.5..<157.5: return "southeast"
+        case 157.5..<202.5: return "south"
+        case 202.5..<247.5: return "southwest"
+        case 247.5..<292.5: return "west"
+        case 292.5..<337.5: return "northwest"
+        default:            return "north"
         }
     }
 
