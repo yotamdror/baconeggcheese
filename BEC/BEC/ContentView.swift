@@ -19,7 +19,7 @@ private extension Category {
         switch self {
         case .pizza: return Color(red: 238/255, green: 53/255,  blue: 46/255)  // 1/2/3
         case .bagel: return Color(red: 255/255, green: 99/255,  blue: 25/255)  // B/D/F/M
-        case .bec:   return Color(red: 0,       green: 57/255,  blue: 166/255) // A/C/E
+        case .bec:   return Color(red: 0,       green: 102/255, blue: 178/255) // MTA signage blue
         }
     }
 
@@ -27,7 +27,7 @@ private extension Category {
         switch self {
         case .pizza: return "EE352E"
         case .bagel: return "FF6319"
-        case .bec:   return "0039A6"
+        case .bec:   return "0066B2"
         }
     }
 }

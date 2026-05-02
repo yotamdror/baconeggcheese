@@ -135,8 +135,7 @@ serve(async (req) => {
         ),
         highlightedReview: pickReview(place.reviews, category),
         reviews: pickAllReviews(place.reviews, category),
-      }))
-      .filter((place) => place.highlightedReview !== null);
+      }));
 
     logUsageEvent({ category, latitude, longitude, resultCount: places.length });
 
@@ -195,7 +194,7 @@ function pickReview(reviews: unknown, category: string): { text: string; author:
   if (!Array.isArray(reviews)) return null;
   for (const review of reviews) {
     const text: string = review?.text?.text ?? "";
-    if (reviewIsRelevant(text, category) && wordCount(text) <= 100) {
+    if (reviewIsRelevant(text, category) && wordCount(text) <= 60) {
       return { text, author: review?.authorAttribution?.displayName ?? "" };
     }
   }
@@ -207,7 +206,7 @@ function pickAllReviews(reviews: unknown, category: string, max = 5): Array<{ te
   return reviews
     .filter((r) => {
       const text: string = r?.text?.text ?? "";
-      return reviewIsRelevant(text, category) && wordCount(text) <= 100;
+      return reviewIsRelevant(text, category) && wordCount(text) <= 60;
     })
     .slice(0, max)
     .map((r) => ({ text: r?.text?.text ?? "", author: r?.authorAttribution?.displayName ?? "" }));
