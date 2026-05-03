@@ -435,26 +435,66 @@ struct CategoryPageView: View {
     }
 
     private var loadingView: some View {
-        VStack(spacing: 0) {
-            Spacer()
-            Group {
-                if category == .bec {
-                    Image("bec-icon")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: 140, maxHeight: 140)
-                } else {
-                    Text(category.emoji)
-                        .font(.system(size: 120))
+        ZStack {
+            // Ghost layout — mirrors loadedView's exact spacer structure so the icon
+            // lands at the same pixel position when the transition fires.
+            VStack(spacing: 0) {
+                Spacer(minLength: 0)
+                Group {
+                    if category == .bec {
+                        Image("bec-icon")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxWidth: 160, maxHeight: 160)
+                    } else {
+                        Text(category.emoji)
+                            .font(.system(size: 130))
+                            .lineLimit(1)
+                    }
                 }
+                .frame(maxWidth: .infinity)
+                Spacer(minLength: 0)
+                HStack(alignment: .center, spacing: 18) {
+                    Canvas { _, _ in }.frame(width: 64, height: 64)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("00")
+                            .font(.system(size: 96, weight: .bold))
+                            .kerning(-4)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                        Text("min walk")
+                            .font(.system(size: 10, weight: .bold))
+                            .tracking(3.5)
+                        Text("N")
+                            .font(.system(size: 24, weight: .black))
+                            .tracking(3)
+                            .padding(.top, 2)
+                    }
+                }
+                .padding(.horizontal, 32)
+                .hidden()
+                Spacer(minLength: 0)
+                VStack(spacing: 4) {
+                    Text("PLACE NAME")
+                        .font(.system(size: 18, weight: .bold))
+                        .tracking(0.5)
+                        .lineLimit(2)
+                    Text("OPEN")
+                        .font(.system(size: 11, weight: .semibold))
+                        .tracking(2)
+                    StarRatingView(rating: 4.0, color: accentColor)
+                        .padding(.top, 2)
+                }
+                .padding(.horizontal, 24)
+                .hidden()
+                Spacer(minLength: 0)
             }
-            Spacer()
+
             Text(category.loadingText)
                 .font(.system(.subheadline).italic())
                 .foregroundStyle(Color.textMuted)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
-            Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -492,9 +532,6 @@ struct CategoryPageView: View {
         await MainActor.run {
             withAnimation(.spring(response: 0.42, dampingFraction: 0.75)) {
                 isLoading = false
-            }
-            if !places.isEmpty {
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             }
         }
         if let closest = places.first {
