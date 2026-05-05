@@ -178,7 +178,7 @@ async function searchByText(query: string, latitude: number, longitude: number) 
     headers: googleHeaders(),
     body: JSON.stringify({
       textQuery: query,
-      locationBias: {
+      locationRestriction: {
         circle: { center: { latitude, longitude }, radius: RADIUS_METERS },
       },
       rankPreference: "DISTANCE",
