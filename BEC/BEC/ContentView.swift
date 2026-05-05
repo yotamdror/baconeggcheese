@@ -357,7 +357,8 @@ struct CategoryPageView: View {
 
     @ViewBuilder
     private func loadedView(_ place: Place) -> some View {
-        let mins = directionsResult?.durationMinutes ?? place.walkingMinutes(from: userLocation)
+        let inManhattan = LocationManager.isInManhattan(userLocation)
+        let mins = (inManhattan ? directionsResult?.durationMinutes : nil) ?? place.walkingMinutes(from: userLocation)
 
         VStack(spacing: 0) {
             Spacer(minLength: 0)
@@ -646,9 +647,10 @@ struct DrawerView: View {
     private var expandedContent: some View {
         // Directions label
         Text({
-            let mins = directionsResult?.durationMinutes ?? place.walkingMinutes(from: userLocation)
+            let inManhattan = LocationManager.isInManhattan(userLocation)
+            let mins = (inManhattan ? directionsResult?.durationMinutes : nil) ?? place.walkingMinutes(from: userLocation)
             let fallback = "\(mins) min walk · \(place.cardinalDirection(from: userLocation))"
-            if FeatureFlags.blockCalculator && LocationManager.isInManhattan(userLocation),
+            if FeatureFlags.blockCalculator && inManhattan,
                let desc = directionsResult?.blockDescription, !desc.isEmpty {
                 return desc
             }
