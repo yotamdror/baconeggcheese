@@ -77,9 +77,8 @@ struct Place: Decodable, Identifiable {
     func cardinalDirection(from user: CLLocation) -> String {
         let b = bearing(from: user)
         if LocationManager.isInManhattan(user) {
-            // Rotate by 30° to align true north with Manhattan's street grid
-            // (avenues run ~NNW, so uptown ≈ true bearing 330°; +30° maps that to 0°)
-            let g = (b + 30).truncatingRemainder(dividingBy: 360)
+            // Subtract 29° to align Manhattan's grid: uptown ≈ true bearing 29° (NNE) → grid 0°
+            let g = (b - 29 + 360).truncatingRemainder(dividingBy: 360)
             switch g {
             case 315..<360, 0..<45: return "uptown"
             case 45..<135:          return "crosstown"

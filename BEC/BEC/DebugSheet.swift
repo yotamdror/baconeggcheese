@@ -141,7 +141,7 @@ struct DebugSheetView: View {
     // Mirrors the logic in Place.cardinalDirection — kept local to avoid coupling debug UI to model
     private func dirLabel(_ bearing: Double) -> String {
         if inManhattan {
-            let g = (bearing + 30).truncatingRemainder(dividingBy: 360)
+            let g = (bearing - 29 + 360).truncatingRemainder(dividingBy: 360)
             switch g {
             case 315..<360, 0..<45: return "uptown"
             case 45..<135:          return "crosstown"
