@@ -26,11 +26,21 @@ struct ShakeDetector: UIViewRepresentable {
     }
 }
 
+// MARK: - Screen Snapshot
+
+struct ScreenSnapshot {
+    let placeName: String
+    let walkMins: Int
+    let direction: String
+    let status: String
+}
+
 // MARK: - Debug Sheet
 
 struct DebugSheetView: View {
     let userLocation: CLLocation
     let heading: CLLocationDirection?
+    let snapshot: ScreenSnapshot?
 
     @Environment(\.dismiss) private var dismiss
 
@@ -52,12 +62,12 @@ struct DebugSheetView: View {
     var body: some View {
         NavigationStack {
             List {
+                copySection
+                screenSection
                 locationSection
                 compassSection
-                directionModeSection
                 featureFlagsSection
                 appSection
-                copySection
             }
             .navigationTitle("Debug")
             .navigationBarTitleDisplayMode(.inline)
@@ -71,6 +81,31 @@ struct DebugSheetView: View {
     }
 
     // MARK: - Sections
+
+    private var copySection: some View {
+        Section {
+            Button("Copy Report") {
+                UIPasteboard.general.string = buildReport()
+                dismiss()
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    private var screenSection: some View {
+        Section("SCREEN") {
+            if let s = snapshot {
+                row("Place", s.placeName)
+                row("Walk time", "\(s.walkMins) min")
+                row("Direction", s.direction)
+                row("Status", s.status)
+            } else {
+                Text("Loading…")
+                    .foregroundStyle(.secondary)
+                    .monospaced()
+            }
+        }
+    }
 
     private var locationSection: some View {
         Section("LOCATION") {
@@ -97,16 +132,6 @@ struct DebugSheetView: View {
         }
     }
 
-    private var directionModeSection: some View {
-        let mode = inManhattan ? "MANHATTAN GRID" : "STANDARD CARDINAL"
-        return Section("DIRECTION MODE: \(mode)") {
-            row("N  (0°)",   "\"\(dirLabel(0))\"")
-            row("E  (90°)",  "\"\(dirLabel(90))\"")
-            row("S  (180°)", "\"\(dirLabel(180))\"")
-            row("W  (270°)", "\"\(dirLabel(270))\"")
-        }
-    }
-
     private var featureFlagsSection: some View {
         Section("FEATURE FLAGS") {
             row("blockCalculator", FeatureFlags.blockCalculator ? "true" : "false")
@@ -120,16 +145,6 @@ struct DebugSheetView: View {
         }
     }
 
-    private var copySection: some View {
-        Section {
-            Button("Copy Report") {
-                UIPasteboard.general.string = buildReport()
-                dismiss()
-            }
-            .frame(maxWidth: .infinity)
-        }
-    }
-
     // MARK: - Helpers
 
     private func row(_ label: String, _ value: String) -> some View {
@@ -138,44 +153,29 @@ struct DebugSheetView: View {
         }
     }
 
-    // Mirrors the logic in Place.cardinalDirection — kept local to avoid coupling debug UI to model
-    private func dirLabel(_ bearing: Double) -> String {
-        if inManhattan {
-            let g = (bearing - 29 + 360).truncatingRemainder(dividingBy: 360)
-            switch g {
-            case 315..<360, 0..<45: return "uptown"
-            case 45..<135:          return "crosstown"
-            case 135..<225:         return "downtown"
-            default:                return "crosstown"
-            }
-        }
-        switch bearing {
-        case 22.5..<67.5:   return "northeast"
-        case 67.5..<112.5:  return "east"
-        case 112.5..<157.5: return "southeast"
-        case 157.5..<202.5: return "south"
-        case 202.5..<247.5: return "southwest"
-        case 247.5..<292.5: return "west"
-        case 292.5..<337.5: return "northwest"
-        default:            return "north"
-        }
-    }
-
     private func buildReport() -> String {
         let now = DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .medium)
         let gpsFix = Self.timeFmt.string(from: userLocation.timestamp)
         let headingStr = heading.map { String(format: "%.1f°", $0) } ?? "unavailable"
-        let mode = inManhattan ? "Manhattan grid" : "standard cardinal"
-        let samples = [
-            "  N  (0°)   → \"\(dirLabel(0))\"",
-            "  E  (90°)  → \"\(dirLabel(90))\"",
-            "  S  (180°) → \"\(dirLabel(180))\"",
-            "  W  (270°) → \"\(dirLabel(270))\"",
-        ].joined(separator: "\n")
+
+        let screenBlock: String
+        if let s = snapshot {
+            screenBlock = """
+            Place:     \(s.placeName)
+            Walk time: \(s.walkMins) min
+            Direction: \(s.direction)
+            Status:    \(s.status)
+            """
+        } else {
+            screenBlock = "(loading)"
+        }
 
         return """
         BEC Debug Report
         Captured: \(now)
+
+        --- SCREEN ---
+        \(screenBlock)
 
         --- LOCATION ---
         Coordinates:   \(String(format: "%.5f, %.5f", coord.latitude, coord.longitude))
@@ -185,9 +185,6 @@ struct DebugSheetView: View {
 
         --- COMPASS ---
         Heading: \(headingStr)
-
-        --- DIRECTION MODE: \(mode.uppercased()) ---
-        \(samples)
 
         --- FEATURE FLAGS ---
         blockCalculator: \(FeatureFlags.blockCalculator)

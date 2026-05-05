@@ -118,6 +118,7 @@ struct MainView: View {
     let heading: CLLocationDirection?
     @State private var selectedTab = 2
     @State private var showDebugSheet = false
+    @State private var screenSnapshots: [Int: ScreenSnapshot] = [:]
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -129,7 +130,8 @@ struct MainView: View {
                     CategoryPageView(
                         category: category,
                         userLocation: userLocation,
-                        heading: heading
+                        heading: heading,
+                        onSnapshot: { snap in screenSnapshots[index] = snap }
                     )
                     .tag(index)
                 }
@@ -155,7 +157,7 @@ struct MainView: View {
         }
         .background(Color.bg)
         .sheet(isPresented: $showDebugSheet) {
-            DebugSheetView(userLocation: userLocation, heading: heading)
+            DebugSheetView(userLocation: userLocation, heading: heading, snapshot: screenSnapshots[selectedTab])
         }
     }
 }
@@ -300,6 +302,7 @@ struct CategoryPageView: View {
     let category: Category
     let userLocation: CLLocation
     let heading: CLLocationDirection?
+    let onSnapshot: (ScreenSnapshot) -> Void
 
     @State private var places: [Place] = []
     @State private var isLoading = true
@@ -347,6 +350,8 @@ struct CategoryPageView: View {
             }
         }
         .task(id: locationKey) { await load() }
+        .onChange(of: currentPlace?.id) { fireSnapshot() }
+        .onChange(of: directionsResult?.durationMinutes) { fireSnapshot() }
     }
 
     private func displayBearing(for place: Place) -> Double {
@@ -514,6 +519,18 @@ struct CategoryPageView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    private func fireSnapshot() {
+        guard let place = currentPlace else { return }
+        let mins = directionsResult?.durationMinutes ?? place.walkingMinutes(from: userLocation)
+        let direction = place.cardinalDirection(from: userLocation).uppercased()
+        let status: String = {
+            let s = place.isOpen ? "OPEN" : "CLOSED"
+            if let label = place.hoursLabel { return "\(s) · \(label)" }
+            return s
+        }()
+        onSnapshot(ScreenSnapshot(placeName: place.name.uppercased(), walkMins: mins, direction: direction, status: status))
+    }
+
     private func selectPlace(_ place: Place) {
         selectedPlace = place
         drawerOpen = false
@@ -533,6 +550,7 @@ struct CategoryPageView: View {
             withAnimation(.spring(response: 0.42, dampingFraction: 0.75)) {
                 isLoading = false
             }
+            fireSnapshot()
         }
         if let closest = places.first {
             let result = await DirectionsService.fetch(origin: userLocation, destination: closest)
