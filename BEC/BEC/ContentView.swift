@@ -296,6 +296,91 @@ struct MiniMapView: View {
     }
 }
 
+// MARK: - Hero
+
+struct HeroView: View {
+    let category: Category
+    let place: Place
+    let userLocation: CLLocation
+    let bearing: Double
+    let walkMins: Int
+
+    private var accentColor: Color { category.accentColor }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+
+            Group {
+                if category == .bec {
+                    Image("bec-icon")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: 160, maxHeight: 160)
+                } else {
+                    Text(category.emoji)
+                        .font(.system(size: 130))
+                        .lineLimit(1)
+                }
+            }
+            .id(category.id)
+            .transition(.scale(scale: 0.5).combined(with: .opacity))
+            .frame(maxWidth: .infinity)
+
+            Spacer(minLength: 0)
+
+            HStack(alignment: .center, spacing: 18) {
+                ArrowView(bearing: bearing, color: accentColor)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("\(walkMins)")
+                        .font(.system(size: 96, weight: .bold))
+                        .foregroundStyle(accentColor)
+                        .kerning(-4)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    Text("min walk")
+                        .font(.system(size: 10, weight: .bold))
+                        .tracking(3.5)
+                        .foregroundStyle(accentColor.opacity(0.55))
+                    Text(place.cardinalDirection(from: userLocation).uppercased())
+                        .font(.system(size: 24, weight: .black))
+                        .tracking(3)
+                        .foregroundStyle(accentColor)
+                        .padding(.top, 2)
+                }
+            }
+            .padding(.horizontal, 32)
+
+            Spacer(minLength: 0)
+
+            VStack(spacing: 4) {
+                Text(place.name.uppercased())
+                    .font(.system(size: 18, weight: .bold))
+                    .tracking(0.5)
+                    .foregroundStyle(Color.textMain)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                Text({
+                    let status = place.isOpen ? "OPEN" : "CLOSED"
+                    if let label = place.hoursLabel { return "\(status) · \(label)" }
+                    return status
+                }())
+                    .font(.system(size: 11, weight: .semibold))
+                    .tracking(2)
+                    .foregroundStyle(place.isOpen ? accentColor.opacity(0.75) : Color.textMuted)
+                    .lineLimit(1)
+                if let rating = place.rating {
+                    StarRatingView(rating: rating, color: accentColor)
+                        .padding(.top, 2)
+                }
+            }
+            .padding(.horizontal, 24)
+
+            Spacer(minLength: 0)
+        }
+    }
+}
+
 // MARK: - Category Page
 
 struct CategoryPageView: View {
