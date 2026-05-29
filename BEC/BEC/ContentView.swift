@@ -4,7 +4,7 @@ import UIKit
 
 // MARK: - Design System
 
-private extension Color {
+extension Color {
     static let bg        = Color(red: 14/255,  green: 12/255,  blue: 10/255)   // #0e0c0a
     static let drawerBg  = Color(red: 26/255,  green: 23/255,  blue: 20/255)   // #1a1714
     static let textMain  = Color(red: 245/255, green: 244/255, blue: 242/255)  // #f5f4f2
@@ -14,7 +14,7 @@ private extension Color {
 }
 
 // MTA subway line colors — per category
-private extension Category {
+extension Category {
     var accentColor: Color {
         switch self {
         case .pizza: return Color(red: 238/255, green: 53/255,  blue: 46/255)  // 1/2/3
@@ -37,20 +37,33 @@ private extension Category {
 struct ContentView: View {
     @StateObject private var locationManager = LocationManager()
     @StateObject private var tipStore = TipStore()
+    @AppStorage("hasSeenAbout") private var hasSeenAbout = false
+    @AppStorage("hasSeenOutsideNYCWarning") private var hasSeenOutsideNYCWarning = false
 
     var body: some View {
         ZStack {
             Color.bg.ignoresSafeArea()
-            switch locationManager.authorizationStatus {
-            case .notDetermined:
-                PermissionView { locationManager.requestPermission() }
-            case .denied, .restricted:
-                NoLocationView()
-            default:
-                if let loc = locationManager.location {
-                    MainView(userLocation: loc, heading: locationManager.heading)
-                } else {
+            if !hasSeenAbout {
+                AboutView(onContinue: {
+                    hasSeenAbout = true
+                    locationManager.requestPermission()
+                })
+            } else {
+                switch locationManager.authorizationStatus {
+                case .notDetermined:
                     ProgressView().tint(Color.textMain)
+                case .denied, .restricted:
+                    NoLocationView()
+                default:
+                    if let loc = locationManager.location {
+                        if !hasSeenOutsideNYCWarning && !LocationManager.isInManhattan(loc) {
+                            OutsideNYCView(onContinue: { hasSeenOutsideNYCWarning = true })
+                        } else {
+                            MainView(userLocation: loc, heading: locationManager.heading)
+                        }
+                    } else {
+                        ProgressView().tint(Color.textMain)
+                    }
                 }
             }
         }
@@ -599,6 +612,7 @@ struct DrawerView: View {
 
     @State private var targetOffset: CGFloat
     @State private var reviewPage = 0
+    @State private var showAbout = false
 
     init(
         isOpen: Binding<Bool>,
@@ -673,6 +687,9 @@ struct DrawerView: View {
         }
         .shadow(color: .black.opacity(0.5), radius: 40, y: -8)
         .offset(y: targetOffset)
+        .sheet(isPresented: $showAbout) {
+            AboutView(onContinue: { showAbout = false })
+        }
         .onChange(of: isOpen) { open in
             withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) {
                 targetOffset = open ? 0 : closedY
@@ -843,6 +860,9 @@ struct DrawerView: View {
     private var settingsSection: some View {
         Color.divider.frame(height: 1)
 
+        settingRow("🗽", "About",            "Built for New York. Works best there too.",
+                   bg: Category.bec.accentColor.opacity(0.12),
+                   action: { showAbout = true })
         settingRow("💬", "Feedback",        "Complaints filed in order of spiciness.",
                    bg: Color(red: 232/255, green: 93/255, blue: 4/255).opacity(0.1),
                    action: openFeedback)
