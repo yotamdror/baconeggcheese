@@ -73,7 +73,7 @@ struct PermissionView: View {
                 .frame(width: 140, height: 140)
                 .padding(.bottom, 40)
             Text("Only way to find the\nclosest bite is to know\nwhere you are first")
-                .font(.system(.title2, design: .serif, weight: .medium))
+                .font(.custom("Cooper Black", size: 22))
                 .foregroundStyle(Color.textMain)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
@@ -99,11 +99,11 @@ struct NoLocationView: View {
     var body: some View {
         VStack(spacing: 16) {
             Text("NO LOCATION")
-                .font(.system(.caption, weight: .black))
+                .font(.custom("Cooper Black", size: 12))
                 .tracking(4)
                 .foregroundStyle(Category.bec.accentColor)
             Text("Only way to find the closest bite is to know where you are first")
-                .font(.system(.title3, design: .serif, weight: .medium))
+                .font(.custom("Cooper Black", size: 20))
                 .foregroundStyle(Color.textMain.opacity(0.6))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
@@ -392,7 +392,7 @@ struct CategoryPageView: View {
                 ArrowView(bearing: displayBearing(for: place), color: accentColor)
                 VStack(alignment: .leading, spacing: 0) {
                     Text("\(mins)")
-                        .font(.system(size: 96, weight: .bold))
+                        .font(.custom("Cooper Black", size: 96))
                         .foregroundStyle(accentColor)
                         .kerning(-4)
                         .lineLimit(1)
@@ -402,7 +402,7 @@ struct CategoryPageView: View {
                         .tracking(3.5)
                         .foregroundStyle(accentColor.opacity(0.55))
                     Text(place.cardinalDirection(from: userLocation).uppercased())
-                        .font(.system(size: 24, weight: .black))
+                        .font(.custom("Cooper Black", size: 24))
                         .tracking(3)
                         .foregroundStyle(accentColor)
                         .padding(.top, 2)
@@ -415,7 +415,7 @@ struct CategoryPageView: View {
             // Place name + address
             VStack(spacing: 4) {
                 Text(place.name.uppercased())
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.custom("Cooper Black", size: 18))
                     .tracking(0.5)
                     .foregroundStyle(Color.textMain)
                     .multilineTextAlignment(.center)
@@ -464,7 +464,7 @@ struct CategoryPageView: View {
                     Canvas { _, _ in }.frame(width: 64, height: 64)
                     VStack(alignment: .leading, spacing: 0) {
                         Text("00")
-                            .font(.system(size: 96, weight: .bold))
+                            .font(.custom("Cooper Black", size: 96))
                             .kerning(-4)
                             .lineLimit(1)
                             .minimumScaleFactor(0.6)
@@ -472,7 +472,7 @@ struct CategoryPageView: View {
                             .font(.system(size: 10, weight: .bold))
                             .tracking(3.5)
                         Text("N")
-                            .font(.system(size: 24, weight: .black))
+                            .font(.custom("Cooper Black", size: 24))
                             .tracking(3)
                             .padding(.top, 2)
                     }
@@ -508,7 +508,7 @@ struct CategoryPageView: View {
     private var noResultsView: some View {
         VStack(spacing: 16) {
             Text("NOWHERE NEARBY")
-                .font(.system(.caption, weight: .black))
+                .font(.custom("Cooper Black", size: 12))
                 .tracking(4)
                 .foregroundStyle(accentColor)
             Text("Nothing within a 15 min walk.")
@@ -674,7 +674,7 @@ struct DrawerView: View {
             }
             return fallback
         }())
-            .font(.system(size: 18, weight: .black))
+            .font(.custom("Cooper Black", size: 18))
             .tracking(0.5)
             .foregroundStyle(accentColor)
             .padding(.horizontal, 24)
