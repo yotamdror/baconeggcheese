@@ -97,17 +97,36 @@ struct PermissionView: View {
 
 struct NoLocationView: View {
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 0) {
+            Spacer()
             Text("NO LOCATION")
                 .font(.custom("Cooper Black", size: 12))
                 .tracking(4)
                 .foregroundStyle(Category.bec.accentColor)
+                .padding(.bottom, 16)
             Text("Only way to find the closest bite is to know where you are first")
                 .font(.custom("Cooper Black", size: 20))
                 .foregroundStyle(Color.textMain.opacity(0.6))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
+            Spacer()
+            Button(action: openSettings) {
+                Text("OPEN SETTINGS")
+                    .font(.system(.subheadline, weight: .black))
+                    .tracking(2)
+                    .foregroundStyle(Color.bg)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(Category.bec.accentColor)
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 52)
         }
+    }
+
+    private func openSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
     }
 }
 
@@ -805,6 +824,9 @@ struct DrawerView: View {
         settingRow("💬", "Feedback",        "Complaints filed in order of spiciness.",
                    bg: Color(red: 232/255, green: 93/255, blue: 4/255).opacity(0.1),
                    action: openFeedback)
+        settingRow("🔒", "Privacy Policy",  "What we do (and don't) with your data.",
+                   bg: Color.white.opacity(0.05),
+                   action: openPrivacyPolicy)
         settingRow(
             "☕",
             tipStore.purchased ? "Thank you ☕" : "Buy me a coffee",
@@ -847,6 +869,13 @@ struct DrawerView: View {
         }
     }
 
+    private func openPrivacyPolicy() {
+        // TODO: replace with live GitHub Pages URL before submitting to App Store
+        if let url = URL(string: "https://yotamdror.github.io/bec-privacy/") {
+            UIApplication.shared.open(url)
+        }
+    }
+
     private func openFeedback() {
         let address = "yotamedror@gmail.com"
         let subject = "BEC App Feedback".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
@@ -873,84 +902,6 @@ struct DrawerView: View {
     }
 }
 
-// MARK: - Top Five — MTA timetable style
-
-struct TopFiveView: View {
-    let places: [Place]
-    let userLocation: CLLocation
-    let category: Category
-    let onSelectPlace: (Place) -> Void
-    @Environment(\.dismiss) private var dismiss
-
-    private var accentColor: Color { category.accentColor }
-
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.bg.ignoresSafeArea()
-                List(Array(places.prefix(5))) { place in
-                    Button(action: { onSelectPlace(place) }) {
-                        HStack(alignment: .center, spacing: 12) {
-                            // MTA line dot
-                            Circle()
-                                .fill(accentColor)
-                                .frame(width: 10, height: 10)
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(place.name)
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .tracking(0.1)
-                                    .foregroundStyle(Color.textMain)
-                                    .lineLimit(1)
-                                if let addr = place.formattedAddress {
-                                    Text(addr)
-                                        .font(.system(size: 11))
-                                        .foregroundStyle(Color.textMuted)
-                                        .lineLimit(1)
-                                }
-                                if let rating = place.rating {
-                                    StarRatingView(rating: rating, color: accentColor)
-                                }
-                            }
-
-                            Spacer()
-
-                            VStack(alignment: .trailing, spacing: 0) {
-                                Text("\(place.walkingMinutes(from: userLocation))")
-                                    .font(.system(size: 28, weight: .bold))
-                                    .foregroundStyle(accentColor)
-                                    .kerning(-1)
-                                Text("min")
-                                    .font(.system(size: 8, weight: .bold))
-                                    .tracking(2.5)
-                                    .foregroundStyle(accentColor.opacity(0.55))
-                                    .textCase(.uppercase)
-                            }
-                        }
-                        .padding(.vertical, 6)
-                    }
-                    .listRowBackground(Color.bg)
-                    .listRowSeparatorTint(Color.white.opacity(0.07))
-                }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-            }
-            .navigationTitle("More options nearby")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .font(.system(size: 11, weight: .bold))
-                        .tracking(2)
-                        .textCase(.uppercase)
-                        .foregroundStyle(accentColor)
-                }
-            }
-        }
-    }
-
-}
 
 // MARK: - Preview Helpers
 
