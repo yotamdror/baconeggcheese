@@ -597,8 +597,30 @@ struct DrawerView: View {
     private let drawerH: CGFloat = 510
     private var closedY: CGFloat { drawerH - peekH }
 
-    @State private var targetOffset: CGFloat = 414  // drawerH - peekH
+    @State private var targetOffset: CGFloat
     @State private var reviewPage = 0
+
+    init(
+        isOpen: Binding<Bool>,
+        place: Place,
+        allPlaces: [Place],
+        userLocation: CLLocation,
+        category: Category,
+        accentColor: Color,
+        directionsResult: DirectionsResult?,
+        onSelectPlace: @escaping (Place) -> Void,
+        startFullyOpen: Bool = false
+    ) {
+        _isOpen = isOpen
+        self.place = place
+        self.allPlaces = allPlaces
+        self.userLocation = userLocation
+        self.category = category
+        self.accentColor = accentColor
+        self.directionsResult = directionsResult
+        self.onSelectPlace = onSelectPlace
+        _targetOffset = State(initialValue: startFullyOpen ? 0 : 510 - 96)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -1015,7 +1037,44 @@ private let mockBagelPlaces: [Place] = [
             category: .bec,
             accentColor: Color(red: 0, green: 102/255, blue: 178/255),
             directionsResult: nil,
-            onSelectPlace: { _ in }
+            onSelectPlace: { _ in },
+            startFullyOpen: true
+        )
+        .environmentObject(TipStore())
+    }
+}
+
+#Preview("Drawer – Pizza Open") {
+    ZStack(alignment: .bottom) {
+        Color(red: 14/255, green: 12/255, blue: 10/255).ignoresSafeArea()
+        DrawerView(
+            isOpen: .constant(true),
+            place: mockPizzaPlaces[0],
+            allPlaces: mockPizzaPlaces,
+            userLocation: previewLocation,
+            category: .pizza,
+            accentColor: Color(red: 238/255, green: 53/255, blue: 46/255),
+            directionsResult: nil,
+            onSelectPlace: { _ in },
+            startFullyOpen: true
+        )
+        .environmentObject(TipStore())
+    }
+}
+
+#Preview("Drawer – Bagel Open") {
+    ZStack(alignment: .bottom) {
+        Color(red: 14/255, green: 12/255, blue: 10/255).ignoresSafeArea()
+        DrawerView(
+            isOpen: .constant(true),
+            place: mockBagelPlaces[0],
+            allPlaces: mockBagelPlaces,
+            userLocation: previewLocation,
+            category: .bagel,
+            accentColor: Color(red: 1, green: 99/255, blue: 25/255),
+            directionsResult: nil,
+            onSelectPlace: { _ in },
+            startFullyOpen: true
         )
         .environmentObject(TipStore())
     }
