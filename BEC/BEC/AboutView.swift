@@ -23,23 +23,23 @@ struct AboutView: View {
                     .foregroundStyle(Category.bec.accentColor)
                     .padding(.bottom, 16)
 
-                Text("The closest\nslice. Bagel. BEC.")
+                Text("The best is\nthe closest to you.")
                     .font(.custom("Cooper Black", size: 34))
                     .foregroundStyle(Color.textMain)
                     .multilineTextAlignment(.center)
                     .padding(.bottom, 24)
 
                 VStack(alignment: .leading, spacing: 14) {
-                    aboutLine("Built for the Manhattan grid — uptown, downtown, and crosstown.")
-                    aboutLine("The compass knows the angle. Your bodega is closer than you think.")
-                    aboutLine("Outside NYC? Might be slim pickings. No promises on the BEC in Paris.")
+                    aboutLine("People wonder — where do I get a slice, a bagel, a bacon egg and cheese? The answer is usually the closest one to you.")
+                    aboutLine("This app was built specifically for NYC.")
+                    aboutLine("There probably isn't a bagel at 11pm in Paris, or a bacon egg and cheese in Islamabad.")
                 }
                 .padding(.horizontal, 36)
 
                 Spacer()
 
                 Button(action: onContinue) {
-                    Text("LET'S GO")
+                    Text("LET'S GO KNICKS")
                         .font(.system(.subheadline, weight: .black))
                         .tracking(2)
                         .foregroundStyle(Color.bg)
@@ -78,19 +78,19 @@ struct OutsideNYCView: View {
             VStack(spacing: 0) {
                 Spacer()
 
-                Text("NOT IN NEW YORK")
+                Text("YOU'RE NOT IN NYC")
                     .font(.system(size: 11, weight: .black))
                     .tracking(3)
                     .foregroundStyle(Category.bec.accentColor)
                     .padding(.bottom, 20)
 
-                Text("This app runs on\nManhattan logic.")
+                Text("This thing runs on\nManhattan logic.")
                     .font(.custom("Cooper Black", size: 30))
                     .foregroundStyle(Color.textMain)
                     .multilineTextAlignment(.center)
                     .padding(.bottom, 20)
 
-                Text("Uptown. Downtown. Bodegas open at 3am. If you're not in NYC, we can't promise there's a BEC around the corner.\n\nBut you're welcome to look.")
+                Text("This app was built specifically for NYC. There probably isn't a place near you to get a bagel at 11pm in Paris, or a bacon egg and cheese in Islamabad,\n\nbut you're welcome to try.")
                     .font(.system(size: 14))
                     .foregroundStyle(Color.textMuted)
                     .multilineTextAlignment(.center)

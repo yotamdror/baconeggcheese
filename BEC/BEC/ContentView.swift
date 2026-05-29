@@ -149,13 +149,17 @@ struct MainView: View {
     let userLocation: CLLocation
     let heading: CLLocationDirection?
     @State private var selectedTab = 2
+    #if DEBUG
     @State private var showDebugSheet = false
     @State private var screenSnapshots: [Int: ScreenSnapshot] = [:]
+    #endif
 
     var body: some View {
         ZStack(alignment: .top) {
+            #if DEBUG
             ShakeDetector { showDebugSheet = true }
                 .frame(width: 0, height: 0)
+            #endif
 
             TabView(selection: $selectedTab) {
                 ForEach(Array(Category.allCases.enumerated()), id: \.offset) { index, category in
@@ -163,7 +167,11 @@ struct MainView: View {
                         category: category,
                         userLocation: userLocation,
                         heading: heading,
-                        onSnapshot: { snap in screenSnapshots[index] = snap }
+                        onSnapshot: { snap in
+                            #if DEBUG
+                            screenSnapshots[index] = snap
+                            #endif
+                        }
                     )
                     .tag(index)
                 }
@@ -175,10 +183,10 @@ struct MainView: View {
             HStack(spacing: 8) {
                 ForEach(Array(Category.allCases.enumerated()), id: \.offset) { idx, cat in
                     Circle()
-                        .fill(idx == selectedTab ? cat.accentColor : Color.textDim)
+                        .fill(idx == selectedTab ? Color.white : Color.white.opacity(0.3))
                         .frame(width: 6, height: 6)
                         .shadow(
-                            color: idx == selectedTab ? cat.accentColor.opacity(0.6) : .clear,
+                            color: idx == selectedTab ? Color.white.opacity(0.5) : .clear,
                             radius: 3
                         )
                         .animation(.easeInOut(duration: 0.3), value: selectedTab)
@@ -188,9 +196,11 @@ struct MainView: View {
             .padding(.top, 8)
         }
         .background(Color.bg)
+        #if DEBUG
         .sheet(isPresented: $showDebugSheet) {
             DebugSheetView(userLocation: userLocation, heading: heading, snapshot: screenSnapshots[selectedTab])
         }
+        #endif
     }
 }
 
@@ -238,7 +248,7 @@ struct ArrowView: View {
         }
         .frame(width: 64, height: 64)
         .rotationEffect(.degrees(bearing))
-        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: bearing)
+        .animation(.spring(response: 0.55, dampingFraction: 0.42), value: bearing)
     }
 }
 
@@ -353,11 +363,12 @@ struct CategoryPageView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            Color.bg.ignoresSafeArea()
+            accentColor.ignoresSafeArea()
 
             if isLoading {
                 loadingView
                     .padding(.bottom, peekH)
+                skeletonDrawer
             } else if let closest = currentPlace {
                 loadedView(closest)
                     .padding(.bottom, peekH)
@@ -396,20 +407,26 @@ struct CategoryPageView: View {
     private func loadedView(_ place: Place) -> some View {
         let inManhattan = LocationManager.isInManhattan(userLocation)
         let mins = (inManhattan ? directionsResult?.durationMinutes : nil) ?? place.walkingMinutes(from: userLocation)
+        let direction = place.cardinalDirection(from: userLocation).uppercased()
+        let status: String = {
+            let s = place.isOpen ? "OPEN" : "CLOSED"
+            if let label = place.hoursLabel { return "\(s) · \(label)" }
+            return s
+        }()
 
         VStack(spacing: 0) {
             Spacer(minLength: 0)
 
-            // Hero emoji / icon
+            // Hero emoji
             Group {
                 if category == .bec {
                     Image("bec-icon")
                         .resizable()
                         .scaledToFit()
-                        .frame(maxWidth: 160, maxHeight: 160)
+                        .frame(maxWidth: 140, maxHeight: 140)
                 } else {
                     Text(category.emoji)
-                        .font(.system(size: 130))
+                        .font(.system(size: 120))
                         .lineLimit(1)
                 }
             }
@@ -419,63 +436,84 @@ struct CategoryPageView: View {
 
             Spacer(minLength: 0)
 
-            // Arrow + walk time + direction
-            HStack(alignment: .center, spacing: 18) {
-                ArrowView(bearing: displayBearing(for: place), color: accentColor)
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("\(mins)")
-                        .font(.custom("Cooper Black", size: 96))
-                        .foregroundStyle(accentColor)
-                        .kerning(-4)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                    Text("min walk")
-                        .font(.system(size: 10, weight: .bold))
-                        .tracking(3.5)
-                        .foregroundStyle(accentColor.opacity(0.55))
-                    Text(place.cardinalDirection(from: userLocation).uppercased())
-                        .font(.custom("Cooper Black", size: 24))
-                        .tracking(3)
-                        .foregroundStyle(accentColor)
-                        .padding(.top, 2)
-                }
+            // Walk time — owns the screen
+            Text("\(mins)")
+                .font(.custom("Cooper Black", size: 148))
+                .foregroundStyle(.white)
+                .kerning(-6)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .multilineTextAlignment(.center)
+
+            Text("MIN WALK")
+                .font(.system(size: 11, weight: .black))
+                .tracking(6)
+                .foregroundStyle(.white.opacity(0.55))
+                .padding(.top, 4)
+
+            // Arrow + direction centered together
+            HStack(spacing: 12) {
+                ArrowView(bearing: displayBearing(for: place), color: .white)
+                Text(direction)
+                    .font(.custom("Cooper Black", size: 32))
+                    .tracking(3)
+                    .foregroundStyle(.white)
             }
-            .padding(.horizontal, 32)
+            .padding(.top, 10)
 
             Spacer(minLength: 0)
 
-            // Place name + address
-            VStack(spacing: 4) {
+            // Place name + status — pinned near drawer
+            VStack(spacing: 3) {
                 Text(place.name.uppercased())
-                    .font(.custom("Cooper Black", size: 18))
-                    .tracking(0.5)
-                    .foregroundStyle(Color.textMain)
+                    .font(.system(size: 13, weight: .black))
+                    .tracking(1.5)
+                    .foregroundStyle(.white.opacity(0.85))
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
-                Text({
-                    let status = place.isOpen ? "OPEN" : "CLOSED"
-                    if let label = place.hoursLabel { return "\(status) · \(label)" }
-                    return status
-                }())
-                    .font(.system(size: 11, weight: .semibold))
-                    .tracking(2)
-                    .foregroundStyle(place.isOpen ? accentColor.opacity(0.75) : Color.textMuted)
+                Text(status)
+                    .font(.system(size: 10, weight: .semibold))
+                    .tracking(2.5)
+                    .foregroundStyle(place.isOpen ? .white.opacity(0.6) : .white.opacity(0.35))
                     .lineLimit(1)
-                if let rating = place.rating {
-                    StarRatingView(rating: rating, color: accentColor)
-                        .padding(.top, 2)
-                }
+            }
+            .padding(.horizontal, 32)
+            .padding(.bottom, 28)
+        }
+    }
+
+    private var skeletonDrawer: some View {
+        VStack(spacing: 0) {
+            Capsule()
+                .fill(accentColor.opacity(0.5))
+                .frame(width: 36, height: 3)
+                .padding(.top, 10)
+                .padding(.bottom, 6)
+            HStack {
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(Color.white.opacity(0.07))
+                    .frame(width: 140, height: 9)
+                Spacer()
+                Text("▲")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.textMuted.opacity(0.4))
             }
             .padding(.horizontal, 24)
-
-            Spacer(minLength: 0)
+            .padding(.vertical, 10)
+            .padding(.bottom, 4)
+            Spacer()
         }
+        .frame(height: 510)
+        .background(Color.drawerBg)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .shadow(color: .black.opacity(0.5), radius: 40, y: -8)
+        .offset(y: 510 - 96)
     }
 
     private var loadingView: some View {
         ZStack {
-            // Ghost layout — mirrors loadedView's exact spacer structure so the icon
-            // lands at the same pixel position when the transition fires.
+            // Ghost layout mirrors loadedView structure so emoji lands at the same position on transition.
             VStack(spacing: 0) {
                 Spacer(minLength: 0)
                 Group {
@@ -483,54 +521,46 @@ struct CategoryPageView: View {
                         Image("bec-icon")
                             .resizable()
                             .scaledToFit()
-                            .frame(maxWidth: 160, maxHeight: 160)
+                            .frame(maxWidth: 140, maxHeight: 140)
                     } else {
                         Text(category.emoji)
-                            .font(.system(size: 130))
+                            .font(.system(size: 120))
                             .lineLimit(1)
                     }
                 }
                 .frame(maxWidth: .infinity)
                 Spacer(minLength: 0)
-                HStack(alignment: .center, spacing: 18) {
-                    Canvas { _, _ in }.frame(width: 64, height: 64)
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("00")
-                            .font(.custom("Cooper Black", size: 96))
-                            .kerning(-4)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.6)
-                        Text("min walk")
-                            .font(.system(size: 10, weight: .bold))
-                            .tracking(3.5)
-                        Text("N")
-                            .font(.custom("Cooper Black", size: 24))
-                            .tracking(3)
-                            .padding(.top, 2)
-                    }
-                }
-                .padding(.horizontal, 32)
-                .hidden()
+                Text("00")
+                    .font(.custom("Cooper Black", size: 148))
+                    .kerning(-6)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                Text("MIN WALK")
+                    .font(.system(size: 11, weight: .black))
+                    .tracking(6)
+                    .padding(.top, 4)
+                Text("N")
+                    .font(.custom("Cooper Black", size: 32))
+                    .tracking(3)
+                    .padding(.top, 10)
                 Spacer(minLength: 0)
-                VStack(spacing: 4) {
+                VStack(spacing: 3) {
                     Text("PLACE NAME")
-                        .font(.system(size: 18, weight: .bold))
-                        .tracking(0.5)
+                        .font(.system(size: 13, weight: .black))
+                        .tracking(1.5)
                         .lineLimit(2)
                     Text("OPEN")
-                        .font(.system(size: 11, weight: .semibold))
-                        .tracking(2)
-                    StarRatingView(rating: 4.0, color: accentColor)
-                        .padding(.top, 2)
+                        .font(.system(size: 10, weight: .semibold))
+                        .tracking(2.5)
                 }
-                .padding(.horizontal, 24)
-                .hidden()
+                .padding(.horizontal, 32)
                 Spacer(minLength: 0)
             }
+            .hidden()
 
             Text(category.loadingText)
                 .font(.system(.subheadline).italic())
-                .foregroundStyle(Color.textMuted)
+                .foregroundStyle(.white.opacity(0.65))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
         }
@@ -542,10 +572,10 @@ struct CategoryPageView: View {
             Text("NOWHERE NEARBY")
                 .font(.custom("Cooper Black", size: 12))
                 .tracking(4)
-                .foregroundStyle(accentColor)
+                .foregroundStyle(.white)
             Text("Nothing within a 15 min walk.")
                 .font(.system(.body, design: .serif))
-                .foregroundStyle(Color.textMain.opacity(0.5))
+                .foregroundStyle(.white.opacity(0.65))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
         }
@@ -640,7 +670,7 @@ struct DrawerView: View {
         VStack(spacing: 0) {
             // Handle bar
             Capsule()
-                .fill(Color.white.opacity(0.1))
+                .fill(accentColor.opacity(0.5))
                 .frame(width: 36, height: 3)
                 .padding(.top, 10)
                 .padding(.bottom, 6)
@@ -679,19 +709,13 @@ struct DrawerView: View {
         .frame(height: drawerH)
         .background(Color.drawerBg)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        // Full-width MTA line bar at top edge
-        .overlay(alignment: .top) {
-            Rectangle()
-                .fill(accentColor)
-                .frame(height: 3)
-        }
         .shadow(color: .black.opacity(0.5), radius: 40, y: -8)
         .offset(y: targetOffset)
         .sheet(isPresented: $showAbout) {
             AboutView(onContinue: { showAbout = false })
         }
         .onChange(of: isOpen) { open in
-            withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.7)) {
                 targetOffset = open ? 0 : closedY
             }
         }
@@ -706,7 +730,7 @@ struct DrawerView: View {
                 }
                 .onEnded { value in
                     let dy = value.translation.height
-                    withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) {
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.7)) {
                         if !isOpen && dy < -60 {
                             isOpen = true; targetOffset = 0
                         } else if isOpen && dy > 60 {
