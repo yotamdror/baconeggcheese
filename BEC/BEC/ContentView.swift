@@ -952,6 +952,120 @@ struct TopFiveView: View {
 
 }
 
-#Preview {
-    ContentView()
+// MARK: - Preview Helpers
+
+#if DEBUG
+extension CategoryPageView {
+    init(category: Category, userLocation: CLLocation, heading: CLLocationDirection?,
+         onSnapshot: @escaping (ScreenSnapshot) -> Void, previewPlaces: [Place]) {
+        self.category = category
+        self.userLocation = userLocation
+        self.heading = heading
+        self.onSnapshot = onSnapshot
+        self._places = State(initialValue: previewPlaces)
+        self._isLoading = State(initialValue: false)
+        self._directionsResult = State(initialValue: nil)
+        self._selectedPlace = State(initialValue: nil)
+        self._drawerOpen = State(initialValue: false)
+    }
+}
+#endif
+
+private extension Place {
+    static func mock(
+        id: String = "preview",
+        name: String = "Leo's Bagels",
+        address: String = "3 Hanover Square, New York, NY",
+        lat: Double = 40.7068,
+        lng: Double = -74.0090,
+        rating: Double? = 4.7,
+        isOpen: Bool = true,
+        review: String? = "Best everything bagel in the financial district.",
+        reviewAuthor: String = "A. New Yorker"
+    ) -> Place {
+        let ratingJSON = rating.map { String($0) } ?? "null"
+        let reviewJSON = review.map { r in
+            "{\"text\": \"\(r)\", \"author\": \"\(reviewAuthor)\"}"
+        } ?? "null"
+        let json = """
+        {
+            "id": "\(id)",
+            "displayName": {"text": "\(name)"},
+            "formattedAddress": "\(address)",
+            "location": {"latitude": \(lat), "longitude": \(lng)},
+            "rating": \(ratingJSON),
+            "currentOpeningHours": {"openNow": \(isOpen)},
+            "highlightedReview": \(reviewJSON)
+        }
+        """.data(using: .utf8)!
+        return try! JSONDecoder().decode(Place.self, from: json)
+    }
+}
+
+private let previewLocation = CLLocation(latitude: 40.7128, longitude: -74.0060)
+
+private let mockBECPlaces: [Place] = [
+    .mock(id: "b1", name: "Eisenberg's Sandwich Shop", address: "174 5th Ave", lat: 40.7411, lng: -73.9897, rating: 4.6, review: "The BEC here is a religious experience.", reviewAuthor: "M. Feinberg"),
+    .mock(id: "b2", name: "Gem Spa", address: "131 2nd Ave", lat: 40.7264, lng: -73.9842, rating: 4.2, review: nil),
+    .mock(id: "b3", name: "Lexington Candy Shop", address: "1226 Lexington Ave", lat: 40.7758, lng: -73.9569, rating: 4.5, review: nil),
+]
+
+private let mockPizzaPlaces: [Place] = [
+    .mock(id: "p1", name: "Joe's Pizza", address: "7 Carmine St", lat: 40.7303, lng: -74.0023, rating: 4.8, review: "The platonic ideal of a NYC slice.", reviewAuthor: "A. Critic"),
+    .mock(id: "p2", name: "Di Fara Pizza", address: "1424 Avenue J", lat: 40.6249, lng: -73.9615, rating: 4.9, review: nil),
+    .mock(id: "p3", name: "Lucali", address: "575 Henry St", lat: 40.6791, lng: -73.9987, rating: 4.9, review: nil),
+]
+
+private let mockBagelPlaces: [Place] = [
+    .mock(id: "bg1", name: "Leo's Bagels", address: "3 Hanover Square", lat: 40.7068, lng: -74.0090, rating: 4.7, review: "Best everything bagel in the financial district.", reviewAuthor: "A. New Yorker"),
+    .mock(id: "bg2", name: "Russ & Daughters", address: "179 E Houston St", lat: 40.7223, lng: -73.9868, rating: 4.8, review: nil),
+    .mock(id: "bg3", name: "Ess-a-Bagel", address: "831 3rd Ave", lat: 40.7548, lng: -73.9692, rating: 4.6, review: nil),
+]
+
+// MARK: - Previews
+
+#Preview("Permission") {
+    ZStack {
+        Color(red: 14/255, green: 12/255, blue: 10/255).ignoresSafeArea()
+        PermissionView {}
+    }
+}
+
+#Preview("No Location") {
+    ZStack {
+        Color(red: 14/255, green: 12/255, blue: 10/255).ignoresSafeArea()
+        NoLocationView()
+    }
+}
+
+#Preview("BEC – Loaded") {
+    CategoryPageView(category: .bec, userLocation: previewLocation, heading: 30, onSnapshot: { _ in }, previewPlaces: mockBECPlaces)
+        .environmentObject(TipStore())
+}
+
+#Preview("Pizza – Loaded") {
+    CategoryPageView(category: .pizza, userLocation: previewLocation, heading: 30, onSnapshot: { _ in }, previewPlaces: mockPizzaPlaces)
+        .environmentObject(TipStore())
+}
+
+#Preview("Bagel – Loaded") {
+    CategoryPageView(category: .bagel, userLocation: previewLocation, heading: 30, onSnapshot: { _ in }, previewPlaces: mockBagelPlaces)
+        .environmentObject(TipStore())
+}
+
+#Preview("Drawer – BEC Open") {
+    ZStack(alignment: .bottom) {
+        Color(red: 14/255, green: 12/255, blue: 10/255).ignoresSafeArea()
+        DrawerView(
+            isOpen: .constant(true),
+            place: mockBECPlaces[0],
+            allPlaces: mockBECPlaces,
+            userLocation: previewLocation,
+            category: .bec,
+            accentColor: Color(red: 0, green: 102/255, blue: 178/255),
+            directionsResult: nil,
+            onSelectPlace: { _ in }
+        )
+        .environmentObject(TipStore())
+    }
 }

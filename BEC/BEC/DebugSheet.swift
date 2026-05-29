@@ -195,3 +195,11 @@ struct DebugSheetView: View {
         """
     }
 }
+
+#Preview("Debug Sheet") {
+    DebugSheetView(
+        userLocation: CLLocation(latitude: 40.7128, longitude: -74.0060),
+        heading: 45.0,
+        snapshot: ScreenSnapshot(placeName: "LEO'S BAGELS", walkMins: 7, direction: "UPTOWN", status: "OPEN · closes 3pm")
+    )
+}
