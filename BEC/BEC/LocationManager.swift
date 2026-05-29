@@ -42,10 +42,12 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
     static func isInManhattan(_ location: CLLocation) -> Bool {
         let px = location.coordinate.longitude
         let py = location.coordinate.latitude
-        // ~11 vertices tracing Manhattan clockwise from the southern tip
+        // ~13 vertices tracing Manhattan clockwise from the southern tip
         let poly: [(x: Double, y: Double)] = [
             (-74.0200, 40.7000), // SW Battery Park
-            (-73.9710, 40.7000), // SE near Brooklyn Bridge
+            (-74.0060, 40.7020), // SE tip / Whitehall
+            (-73.9975, 40.7065), // Seaport – Brooklyn Bridge Manhattan side
+            (-73.9720, 40.7280), // FDR ~Houston St
             (-73.9710, 40.7550), // Midtown East / FDR ~50th
             (-73.9450, 40.7800), // UES ~86th
             (-73.9190, 40.8070), // East Harlem ~125th
