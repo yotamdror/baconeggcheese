@@ -161,7 +161,6 @@ struct MainView: View {
     // Real pages at indices 1-3; wraps at 0 and 4 snap back silently.
     private let circularCategories: [Category] = [.pizza, .bec, .bagel, .pizza, .bec]
     @State private var selectedTab = 1  // Start on bec
-    @State private var wrapFlash = false
     #if DEBUG
     @State private var showDebugSheet = false
     @State private var screenSnapshots: [Int: ScreenSnapshot] = [:]
@@ -204,27 +203,23 @@ struct MainView: View {
                 if selectedTab == 0 {
                     var t = Transaction(); t.disablesAnimations = true
                     withTransaction(t) { selectedTab = 3 }
-                    triggerWrapFlash()
                 } else if selectedTab == 4 {
                     var t = Transaction(); t.disablesAnimations = true
                     withTransaction(t) { selectedTab = 1 }
-                    triggerWrapFlash()
                 }
             }
 
-            // 6px dots — all light up on wrap to signal full circle
+            // 6px dots
             HStack(spacing: 8) {
                 ForEach(Array(Category.allCases.enumerated()), id: \.offset) { idx, cat in
                     Circle()
-                        .fill(idx == dotIndex || wrapFlash ? Color.white : Color.white.opacity(0.3))
+                        .fill(idx == dotIndex ? Color.white : Color.white.opacity(0.3))
                         .frame(width: 6, height: 6)
-                        .scaleEffect(wrapFlash ? 1.6 : 1.0)
                         .shadow(
-                            color: idx == dotIndex || wrapFlash ? Color.white.opacity(0.5) : .clear,
-                            radius: wrapFlash ? 5 : 3
+                            color: idx == dotIndex ? Color.white.opacity(0.5) : .clear,
+                            radius: 3
                         )
                         .animation(.easeInOut(duration: 0.3), value: selectedTab)
-                        .animation(.spring(response: 0.25, dampingFraction: 0.5), value: wrapFlash)
                         .onTapGesture { selectedTab = idx + 1 }
                 }
             }
@@ -238,12 +233,7 @@ struct MainView: View {
         #endif
     }
 
-    private func triggerWrapFlash() {
-        withAnimation { wrapFlash = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
-            withAnimation { wrapFlash = false }
-        }
-    }
+
 }
 
 // MARK: - Star Rating
