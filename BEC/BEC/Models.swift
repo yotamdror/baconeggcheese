@@ -2,7 +2,7 @@ import Foundation
 import CoreLocation
 
 enum Category: String, CaseIterable, Identifiable {
-    case pizza, bagel, bec
+    case bec, bagel, pizza
     var id: String { rawValue }
 
     var emoji: String {
@@ -34,6 +34,14 @@ enum Category: String, CaseIterable, Identifiable {
         case .pizza: return "triangulating nearest cheese situation…"
         case .bagel: return "locating acceptable schmear within striking distance…"
         case .bec:   return "sniffing out the nearest egg situation…"
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .pizza: return "pizza-icon"
+        case .bagel: return "bagel-icon"
+        case .bec:   return "bec-icon"
         }
     }
 }

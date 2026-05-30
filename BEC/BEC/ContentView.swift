@@ -17,17 +17,26 @@ extension Color {
 extension Category {
     var accentColor: Color {
         switch self {
-        case .pizza: return Color(red: 238/255, green: 53/255,  blue: 46/255)  // 1/2/3
-        case .bagel: return Color(red: 255/255, green: 99/255,  blue: 25/255)  // B/D/F/M
         case .bec:   return Color(red: 0,       green: 102/255, blue: 178/255) // MTA signage blue
+        case .bagel: return Color.white
+        case .pizza: return Color(red: 255/255, green: 102/255, blue: 0/255)   // FF6600
         }
     }
 
     var accentHex: String {
         switch self {
-        case .pizza: return "EE352E"
-        case .bagel: return "FF6319"
         case .bec:   return "0066B2"
+        case .bagel: return "FFFFFF"
+        case .pizza: return "FF6600"
+        }
+    }
+
+    // Text/icon color to use on top of accentColor background
+    var onAccentColor: Color {
+        switch self {
+        case .bec:   return .white
+        case .bagel: return .black
+        case .pizza: return .white
         }
     }
 }
@@ -83,7 +92,7 @@ struct PermissionView: View {
             Image("bec-icon")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 140, height: 140)
+                .frame(width: 220, height: 220)
                 .padding(.bottom, 40)
             Text("Only way to find the\nclosest bite is to know\nwhere you are first")
                 .font(.custom("Cooper Black", size: 22))
@@ -148,11 +157,24 @@ struct NoLocationView: View {
 struct MainView: View {
     let userLocation: CLLocation
     let heading: CLLocationDirection?
-    @State private var selectedTab = 2
+    // Extended circular array: [pizza(wrap), bec, bagel, pizza, bec(wrap)]
+    // Real pages at indices 1-3; wraps at 0 and 4 snap back silently.
+    private let circularCategories: [Category] = [.pizza, .bec, .bagel, .pizza, .bec]
+    @State private var selectedTab = 1  // Start on bec
+    @State private var wrapFlash = false
     #if DEBUG
     @State private var showDebugSheet = false
     @State private var screenSnapshots: [Int: ScreenSnapshot] = [:]
     #endif
+
+    // Maps extended tab index to dot index (0=bec, 1=bagel, 2=pizza)
+    private var dotIndex: Int {
+        switch selectedTab {
+        case 0: return 2
+        case 4: return 0
+        default: return selectedTab - 1
+        }
+    }
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -162,14 +184,14 @@ struct MainView: View {
             #endif
 
             TabView(selection: $selectedTab) {
-                ForEach(Array(Category.allCases.enumerated()), id: \.offset) { index, category in
+                ForEach(Array(circularCategories.enumerated()), id: \.offset) { index, category in
                     CategoryPageView(
                         category: category,
                         userLocation: userLocation,
                         heading: heading,
                         onSnapshot: { snap in
                             #if DEBUG
-                            screenSnapshots[index] = snap
+                            screenSnapshots[dotIndex] = snap
                             #endif
                         }
                     )
@@ -178,19 +200,32 @@ struct MainView: View {
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .ignoresSafeArea()
+            .onChange(of: selectedTab) {
+                if selectedTab == 0 {
+                    var t = Transaction(); t.disablesAnimations = true
+                    withTransaction(t) { selectedTab = 3 }
+                    triggerWrapFlash()
+                } else if selectedTab == 4 {
+                    var t = Transaction(); t.disablesAnimations = true
+                    withTransaction(t) { selectedTab = 1 }
+                    triggerWrapFlash()
+                }
+            }
 
-            // 6px dots — active glows in category accent color
+            // 6px dots — all light up on wrap to signal full circle
             HStack(spacing: 8) {
                 ForEach(Array(Category.allCases.enumerated()), id: \.offset) { idx, cat in
                     Circle()
-                        .fill(idx == selectedTab ? Color.white : Color.white.opacity(0.3))
+                        .fill(idx == dotIndex || wrapFlash ? Color.white : Color.white.opacity(0.3))
                         .frame(width: 6, height: 6)
+                        .scaleEffect(wrapFlash ? 1.6 : 1.0)
                         .shadow(
-                            color: idx == selectedTab ? Color.white.opacity(0.5) : .clear,
-                            radius: 3
+                            color: idx == dotIndex || wrapFlash ? Color.white.opacity(0.5) : .clear,
+                            radius: wrapFlash ? 5 : 3
                         )
                         .animation(.easeInOut(duration: 0.3), value: selectedTab)
-                        .onTapGesture { selectedTab = idx }
+                        .animation(.spring(response: 0.25, dampingFraction: 0.5), value: wrapFlash)
+                        .onTapGesture { selectedTab = idx + 1 }
                 }
             }
             .padding(.top, 8)
@@ -198,9 +233,16 @@ struct MainView: View {
         .background(Color.bg)
         #if DEBUG
         .sheet(isPresented: $showDebugSheet) {
-            DebugSheetView(userLocation: userLocation, heading: heading, snapshot: screenSnapshots[selectedTab])
+            DebugSheetView(userLocation: userLocation, heading: heading, snapshot: screenSnapshots[dotIndex])
         }
         #endif
+    }
+
+    private func triggerWrapFlash() {
+        withAnimation { wrapFlash = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+            withAnimation { wrapFlash = false }
+        }
     }
 }
 
@@ -417,18 +459,12 @@ struct CategoryPageView: View {
         VStack(spacing: 0) {
             Spacer(minLength: 0)
 
-            // Hero emoji
+            // Hero image
             Group {
-                if category == .bec {
-                    Image("bec-icon")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: 140, maxHeight: 140)
-                } else {
-                    Text(category.emoji)
-                        .font(.system(size: 120))
-                        .lineLimit(1)
-                }
+                Image(category.iconName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: 220, maxHeight: 220)
             }
             .id(category.id)
             .transition(.scale(scale: 0.5).combined(with: .opacity))
@@ -439,7 +475,7 @@ struct CategoryPageView: View {
             // Walk time — owns the screen
             Text("\(mins)")
                 .font(.custom("Cooper Black", size: 148))
-                .foregroundStyle(.white)
+                .foregroundStyle(category.onAccentColor)
                 .kerning(-6)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
@@ -449,16 +485,16 @@ struct CategoryPageView: View {
             Text("MIN WALK")
                 .font(.system(size: 11, weight: .black))
                 .tracking(6)
-                .foregroundStyle(.white.opacity(0.55))
+                .foregroundStyle(category.onAccentColor.opacity(0.55))
                 .padding(.top, 4)
 
             // Arrow + direction centered together
             HStack(spacing: 12) {
-                ArrowView(bearing: displayBearing(for: place), color: .white)
+                ArrowView(bearing: displayBearing(for: place), color: category.onAccentColor)
                 Text(direction)
                     .font(.custom("Cooper Black", size: 32))
                     .tracking(3)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(category.onAccentColor)
             }
             .padding(.top, 10)
 
@@ -469,13 +505,13 @@ struct CategoryPageView: View {
                 Text(place.name.uppercased())
                     .font(.system(size: 13, weight: .black))
                     .tracking(1.5)
-                    .foregroundStyle(.white.opacity(0.85))
+                    .foregroundStyle(category.onAccentColor.opacity(0.85))
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
                 Text(status)
                     .font(.system(size: 10, weight: .semibold))
                     .tracking(2.5)
-                    .foregroundStyle(place.isOpen ? .white.opacity(0.6) : .white.opacity(0.35))
+                    .foregroundStyle(place.isOpen ? category.onAccentColor.opacity(0.6) : category.onAccentColor.opacity(0.35))
                     .lineLimit(1)
             }
             .padding(.horizontal, 32)
@@ -517,16 +553,10 @@ struct CategoryPageView: View {
             VStack(spacing: 0) {
                 Spacer(minLength: 0)
                 Group {
-                    if category == .bec {
-                        Image("bec-icon")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(maxWidth: 140, maxHeight: 140)
-                    } else {
-                        Text(category.emoji)
-                            .font(.system(size: 120))
-                            .lineLimit(1)
-                    }
+                    Image(category.iconName)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: 220, maxHeight: 220)
                 }
                 .frame(maxWidth: .infinity)
                 Spacer(minLength: 0)
@@ -560,7 +590,7 @@ struct CategoryPageView: View {
 
             Text(category.loadingText)
                 .font(.system(.subheadline).italic())
-                .foregroundStyle(.white.opacity(0.65))
+                .foregroundStyle(category.onAccentColor.opacity(0.65))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
         }
@@ -572,10 +602,10 @@ struct CategoryPageView: View {
             Text("NOWHERE NEARBY")
                 .font(.custom("Cooper Black", size: 12))
                 .tracking(4)
-                .foregroundStyle(.white)
+                .foregroundStyle(category.onAccentColor)
             Text("Nothing within a 15 min walk.")
                 .font(.system(.body, design: .serif))
-                .foregroundStyle(.white.opacity(0.65))
+                .foregroundStyle(category.onAccentColor.opacity(0.65))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
         }
