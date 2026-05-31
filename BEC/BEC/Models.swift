@@ -37,6 +37,14 @@ enum Category: String, CaseIterable, Identifiable {
         }
     }
 
+    var noResultsText: String {
+        switch self {
+        case .pizza: return "No pizza within a 15 min walk. They might all be closed."
+        case .bagel: return "No bagels within a 15 min walk. They might all be closed."
+        case .bec:   return "No BEC within a 15 min walk. They might all be closed."
+        }
+    }
+
     var iconName: String {
         switch self {
         case .pizza: return "pizza-icon"
