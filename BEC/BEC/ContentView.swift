@@ -665,6 +665,7 @@ struct DrawerView: View {
     @State private var targetOffset: CGFloat
     @State private var reviewPage = 0
     @State private var showAbout = false
+    @State private var showFeedback = false
 
     init(
         isOpen: Binding<Bool>,
@@ -735,6 +736,9 @@ struct DrawerView: View {
         .offset(y: targetOffset)
         .sheet(isPresented: $showAbout) {
             AboutView(onContinue: { showAbout = false })
+        }
+        .sheet(isPresented: $showFeedback) {
+            FeedbackView(onDismiss: { showFeedback = false })
         }
         .onChange(of: isOpen) { open in
             withAnimation(.spring(response: 0.32, dampingFraction: 0.7)) {
@@ -911,7 +915,7 @@ struct DrawerView: View {
                    action: { showAbout = true })
         settingRow("💬", "Feedback",        "Complaints filed in order of spiciness.",
                    bg: Color(red: 232/255, green: 93/255, blue: 4/255).opacity(0.1),
-                   action: openFeedback)
+                   action: { showFeedback = true })
         settingRow("🔒", "Privacy Policy",  "What we do (and don't) with your data.",
                    bg: Color.white.opacity(0.05),
                    action: openPrivacyPolicy)
@@ -958,16 +962,7 @@ struct DrawerView: View {
     }
 
     private func openPrivacyPolicy() {
-        // TODO: replace with live GitHub Pages URL before submitting to App Store
         if let url = URL(string: "https://yotamdror.github.io/bec-privacy/") {
-            UIApplication.shared.open(url)
-        }
-    }
-
-    private func openFeedback() {
-        let address = "yotamedror@gmail.com"
-        let subject = "BEC App Feedback".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        if let url = URL(string: "mailto:\(address)?subject=\(subject)") {
             UIApplication.shared.open(url)
         }
     }
