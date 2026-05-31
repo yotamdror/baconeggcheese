@@ -589,11 +589,11 @@ struct CategoryPageView: View {
 
     private var noResultsView: some View {
         VStack(spacing: 16) {
-            Text("NOWHERE NEARBY")
+            Text("NO \(category.label) NEARBY")
                 .font(.custom("Cooper Black", size: 12))
                 .tracking(4)
                 .foregroundStyle(category.onAccentColor)
-            Text("Nothing within a 15 min walk.")
+            Text(category.noResultsText)
                 .font(.system(.body, design: .serif))
                 .foregroundStyle(category.onAccentColor.opacity(0.65))
                 .multilineTextAlignment(.center)
