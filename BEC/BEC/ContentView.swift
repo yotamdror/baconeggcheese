@@ -163,7 +163,7 @@ struct MainView: View {
     @State private var selectedTab = 1  // Start on bec
     #if DEBUG
     @State private var showDebugSheet = false
-    @State private var screenSnapshots: [Int: ScreenSnapshot] = [:]
+    @State private var screenSnapshots: [Category: ScreenSnapshot] = [:]
     #endif
 
     // Maps extended tab index to dot index (0=bec, 1=bagel, 2=pizza)
@@ -190,7 +190,7 @@ struct MainView: View {
                         heading: heading,
                         onSnapshot: { snap in
                             #if DEBUG
-                            screenSnapshots[dotIndex] = snap
+                            screenSnapshots[category] = snap
                             #endif
                         }
                     )
@@ -228,7 +228,7 @@ struct MainView: View {
         .background(Color.bg)
         #if DEBUG
         .sheet(isPresented: $showDebugSheet) {
-            DebugSheetView(userLocation: userLocation, heading: heading, snapshot: screenSnapshots[dotIndex])
+            DebugSheetView(userLocation: userLocation, heading: heading, snapshot: screenSnapshots[circularCategories[selectedTab]])
         }
         #endif
     }
