@@ -39,6 +39,8 @@ extension Category {
         case .pizza: return .white
         }
     }
+
+    var iconMaxSize: CGFloat { 300 }
 }
 
 // MARK: - Root
@@ -454,7 +456,7 @@ struct CategoryPageView: View {
                 Image(category.iconName)
                     .resizable()
                     .scaledToFit()
-                    .frame(maxWidth: 220, maxHeight: 220)
+                    .frame(maxWidth: category.iconMaxSize, maxHeight: category.iconMaxSize)
             }
             .id(category.id)
             .transition(.scale(scale: 0.5).combined(with: .opacity))
@@ -546,7 +548,7 @@ struct CategoryPageView: View {
                     Image(category.iconName)
                         .resizable()
                         .scaledToFit()
-                        .frame(maxWidth: 220, maxHeight: 220)
+                        .frame(maxWidth: category.iconMaxSize, maxHeight: category.iconMaxSize)
                 }
                 .frame(maxWidth: .infinity)
                 Spacer(minLength: 0)
