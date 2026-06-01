@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { checkRateLimit } from "../_shared/rateLimit.ts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -8,6 +9,10 @@ const CORS_HEADERS = {
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: CORS_HEADERS });
+  }
+
+  if (!checkRateLimit(req, 5)) {
+    return jsonError("Too many requests", 429);
   }
 
   try {
@@ -22,7 +27,7 @@ serve(async (req) => {
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 
     const res = await fetch(`${supabaseUrl}/rest/v1/feedback`, {
       method: "POST",
