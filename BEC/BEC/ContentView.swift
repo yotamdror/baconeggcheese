@@ -1072,6 +1072,7 @@ private let mockBagelPlaces: [Place] = [
     }
 }
 
+#if DEBUG
 #Preview("BEC – Loaded") {
     CategoryPageView(category: .bec, userLocation: previewLocation, heading: 30, onSnapshot: { _ in }, previewPlaces: mockBECPlaces)
         .environmentObject(TipStore())
@@ -1086,7 +1087,9 @@ private let mockBagelPlaces: [Place] = [
     CategoryPageView(category: .bagel, userLocation: previewLocation, heading: 30, onSnapshot: { _ in }, previewPlaces: mockBagelPlaces)
         .environmentObject(TipStore())
 }
+#endif
 
+#if DEBUG
 #Preview("Drawer – BEC Open") {
     ZStack(alignment: .bottom) {
         Color(red: 14/255, green: 12/255, blue: 10/255).ignoresSafeArea()
@@ -1140,3 +1143,4 @@ private let mockBagelPlaces: [Place] = [
         .environmentObject(TipStore())
     }
 }
+#endif
