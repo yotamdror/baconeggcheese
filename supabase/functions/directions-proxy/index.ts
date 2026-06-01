@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { checkRateLimit } from "../_shared/rateLimit.ts";
 
 const GOOGLE_API_KEY = Deno.env.get("GOOGLE_PLACES_API_KEY") ?? "";
 
@@ -10,9 +11,19 @@ const CORS_HEADERS = {
 // Manhattan avenues run ~29° west of true north
 const MANHATTAN_GRID_OFFSET = 29;
 
+function isValidLatLng(lat: unknown, lng: unknown): boolean {
+  return typeof lat === "number" && typeof lng === "number" &&
+    isFinite(lat) && isFinite(lng) &&
+    lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: CORS_HEADERS });
+  }
+
+  if (!checkRateLimit(req, 20)) {
+    return jsonError("Too many requests", 429);
   }
 
   try {
@@ -20,6 +31,10 @@ serve(async (req) => {
 
     if (originLat == null || originLng == null || destLat == null || destLng == null) {
       return jsonError("Missing required fields: originLat, originLng, destLat, destLng", 400);
+    }
+
+    if (!isValidLatLng(originLat, originLng) || !isValidLatLng(destLat, destLng)) {
+      return jsonError("Invalid coordinates", 400);
     }
 
     const dirUrl =

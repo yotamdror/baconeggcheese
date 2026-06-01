@@ -23,23 +23,23 @@ struct AboutView: View {
                     .foregroundStyle(Category.bec.accentColor)
                     .padding(.bottom, 16)
 
-                Text("The closest\nslice. Bagel. BEC.")
+                Text("The best is\nthe closest to you.")
                     .font(.custom("Cooper Black", size: 34))
                     .foregroundStyle(Color.textMain)
                     .multilineTextAlignment(.center)
                     .padding(.bottom, 24)
 
                 VStack(alignment: .leading, spacing: 14) {
-                    aboutLine("Built for the Manhattan grid — uptown, downtown, and crosstown.")
-                    aboutLine("The compass knows the angle. Your bodega is closer than you think.")
-                    aboutLine("Outside NYC? Might be slim pickings. No promises on the BEC in Paris.")
+                    aboutLine("People wonder — where do I get a slice, a bagel, a bacon egg and cheese? The answer is usually the closest one to you.")
+                    aboutLine("This app was built specifically for NYC.")
+                    aboutLine("There probably isn't a bagel at 11pm in Paris, or a bacon egg and cheese in Islamabad.")
                 }
                 .padding(.horizontal, 36)
 
                 Spacer()
 
                 Button(action: onContinue) {
-                    Text("LET'S GO")
+                    Text("LET'S GO KNICKS")
                         .font(.system(.subheadline, weight: .black))
                         .tracking(2)
                         .foregroundStyle(Color.bg)
@@ -78,19 +78,19 @@ struct OutsideNYCView: View {
             VStack(spacing: 0) {
                 Spacer()
 
-                Text("NOT IN NEW YORK")
+                Text("YOU'RE NOT IN NYC")
                     .font(.system(size: 11, weight: .black))
                     .tracking(3)
                     .foregroundStyle(Category.bec.accentColor)
                     .padding(.bottom, 20)
 
-                Text("This app runs on\nManhattan logic.")
+                Text("This thing runs on\nManhattan logic.")
                     .font(.custom("Cooper Black", size: 30))
                     .foregroundStyle(Color.textMain)
                     .multilineTextAlignment(.center)
                     .padding(.bottom, 20)
 
-                Text("Uptown. Downtown. Bodegas open at 3am. If you're not in NYC, we can't promise there's a BEC around the corner.\n\nBut you're welcome to look.")
+                Text("This app was built specifically for NYC. There probably isn't a place near you to get a bagel at 11pm in Paris, or a bacon egg and cheese in Islamabad,\n\nbut you're welcome to try.")
                     .font(.system(size: 14))
                     .foregroundStyle(Color.textMuted)
                     .multilineTextAlignment(.center)
@@ -115,6 +115,133 @@ struct OutsideNYCView: View {
     }
 }
 
+// MARK: - Feedback
+
+struct FeedbackView: View {
+    let onDismiss: () -> Void
+
+    @State private var message = ""
+    @State private var state: SubmitState = .idle
+    @FocusState private var focused: Bool
+
+    private enum SubmitState { case idle, sending, success, failure }
+
+    private static let endpoint = URL(string: "https://zpstulodssnymskvjuya.supabase.co/functions/v1/submit-feedback")!
+
+    var body: some View {
+        ZStack {
+            Color.bg.ignoresSafeArea()
+            VStack(spacing: 0) {
+                Spacer()
+
+                Text("WHAT'S ON YOUR MIND")
+                    .font(.system(size: 11, weight: .black))
+                    .tracking(3)
+                    .foregroundStyle(Category.bec.accentColor)
+                    .padding(.bottom, 20)
+
+                if state == .success {
+                    Text("Got it.\nThanks for the note.")
+                        .font(.custom("Cooper Black", size: 28))
+                        .foregroundStyle(Color.textMain)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 36)
+                } else {
+                    ZStack(alignment: .topLeading) {
+                        if message.isEmpty {
+                            Text("Bugs, ideas, complaints about the egg ratio…")
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color.textMuted.opacity(0.5))
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 8)
+                        }
+                        TextEditor(text: $message)
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.textMain)
+                            .scrollContentBackground(.hidden)
+                            .background(.clear)
+                            .frame(minHeight: 120, maxHeight: 200)
+                            .focused($focused)
+                    }
+                    .padding(14)
+                    .background(Color.white.opacity(0.05))
+                    .cornerRadius(10)
+                    .padding(.horizontal, 24)
+
+                    if state == .failure {
+                        Text("Something went wrong. Try again.")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color(red: 232/255, green: 93/255, blue: 4/255))
+                            .padding(.top, 8)
+                    }
+                }
+
+                Spacer()
+
+                if state == .success {
+                    Button(action: onDismiss) {
+                        Text("CLOSE")
+                            .font(.system(.subheadline, weight: .black))
+                            .tracking(2)
+                            .foregroundStyle(Color.bg)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 18)
+                            .background(Category.bec.accentColor)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 52)
+                } else {
+                    Button(action: submit) {
+                        Group {
+                            if state == .sending {
+                                ProgressView().tint(Color.bg)
+                            } else {
+                                Text("SEND IT")
+                                    .font(.system(.subheadline, weight: .black))
+                                    .tracking(2)
+                                    .foregroundStyle(Color.bg)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 18)
+                        .background(message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.textMuted.opacity(0.3) : Category.bec.accentColor)
+                    }
+                    .disabled(message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || state == .sending)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 52)
+                }
+            }
+        }
+        .onAppear { focused = true }
+    }
+
+    private func submit() {
+        let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        state = .sending
+        focused = false
+
+        Task {
+            do {
+                var req = URLRequest(url: Self.endpoint)
+                req.httpMethod = "POST"
+                req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                let body = ["message": trimmed, "app_version": appVersion()]
+                req.httpBody = try JSONSerialization.data(withJSONObject: body)
+                let (_, response) = try await URLSession.shared.data(for: req)
+                let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+                await MainActor.run { state = (200..<300).contains(code) ? .success : .failure }
+            } catch {
+                await MainActor.run { state = .failure }
+            }
+        }
+    }
+
+    private func appVersion() -> String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
+    }
+}
+
 // MARK: - Previews
 
 #Preview("About") {
@@ -123,4 +250,8 @@ struct OutsideNYCView: View {
 
 #Preview("Outside NYC") {
     OutsideNYCView(onContinue: {})
+}
+
+#Preview("Feedback") {
+    FeedbackView(onDismiss: {})
 }

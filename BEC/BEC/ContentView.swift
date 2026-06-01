@@ -17,19 +17,30 @@ extension Color {
 extension Category {
     var accentColor: Color {
         switch self {
-        case .pizza: return Color(red: 238/255, green: 53/255,  blue: 46/255)  // 1/2/3
-        case .bagel: return Color(red: 255/255, green: 99/255,  blue: 25/255)  // B/D/F/M
         case .bec:   return Color(red: 0,       green: 102/255, blue: 178/255) // MTA signage blue
+        case .bagel: return Color.white
+        case .pizza: return Color(red: 255/255, green: 102/255, blue: 0/255)   // FF6600
         }
     }
 
     var accentHex: String {
         switch self {
-        case .pizza: return "EE352E"
-        case .bagel: return "FF6319"
         case .bec:   return "0066B2"
+        case .bagel: return "FFFFFF"
+        case .pizza: return "FF6600"
         }
     }
+
+    // Text/icon color to use on top of accentColor background
+    var onAccentColor: Color {
+        switch self {
+        case .bec:   return .white
+        case .bagel: return .black
+        case .pizza: return .white
+        }
+    }
+
+    var iconMaxSize: CGFloat { 300 }
 }
 
 // MARK: - Root
@@ -83,7 +94,7 @@ struct PermissionView: View {
             Image("bec-icon")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 140, height: 140)
+                .frame(width: 220, height: 220)
                 .padding(.bottom, 40)
             Text("Only way to find the\nclosest bite is to know\nwhere you are first")
                 .font(.custom("Cooper Black", size: 22))
@@ -148,50 +159,83 @@ struct NoLocationView: View {
 struct MainView: View {
     let userLocation: CLLocation
     let heading: CLLocationDirection?
-    @State private var selectedTab = 2
+    // Extended circular array: [pizza(wrap), bec, bagel, pizza, bec(wrap)]
+    // Real pages at indices 1-3; wraps at 0 and 4 snap back silently.
+    private let circularCategories: [Category] = [.pizza, .bec, .bagel, .pizza, .bec]
+    @State private var selectedTab = 1  // Start on bec
+    #if DEBUG
     @State private var showDebugSheet = false
-    @State private var screenSnapshots: [Int: ScreenSnapshot] = [:]
+    @State private var screenSnapshots: [Category: ScreenSnapshot] = [:]
+    #endif
+
+    // Maps extended tab index to dot index (0=bec, 1=bagel, 2=pizza)
+    private var dotIndex: Int {
+        switch selectedTab {
+        case 0: return 2
+        case 4: return 0
+        default: return selectedTab - 1
+        }
+    }
 
     var body: some View {
         ZStack(alignment: .top) {
+            #if DEBUG
             ShakeDetector { showDebugSheet = true }
                 .frame(width: 0, height: 0)
+            #endif
 
             TabView(selection: $selectedTab) {
-                ForEach(Array(Category.allCases.enumerated()), id: \.offset) { index, category in
+                ForEach(Array(circularCategories.enumerated()), id: \.offset) { index, category in
                     CategoryPageView(
                         category: category,
                         userLocation: userLocation,
                         heading: heading,
-                        onSnapshot: { snap in screenSnapshots[index] = snap }
+                        onSnapshot: { snap in
+                            #if DEBUG
+                            screenSnapshots[category] = snap
+                            #endif
+                        }
                     )
                     .tag(index)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .ignoresSafeArea()
+            .onChange(of: selectedTab) {
+                if selectedTab == 0 {
+                    var t = Transaction(); t.disablesAnimations = true
+                    withTransaction(t) { selectedTab = 3 }
+                } else if selectedTab == 4 {
+                    var t = Transaction(); t.disablesAnimations = true
+                    withTransaction(t) { selectedTab = 1 }
+                }
+            }
 
-            // 6px dots — active glows in category accent color
+            // 6px dots
             HStack(spacing: 8) {
                 ForEach(Array(Category.allCases.enumerated()), id: \.offset) { idx, cat in
                     Circle()
-                        .fill(idx == selectedTab ? cat.accentColor : Color.textDim)
+                        .fill(idx == dotIndex ? Color.white : Color.white.opacity(0.3))
                         .frame(width: 6, height: 6)
                         .shadow(
-                            color: idx == selectedTab ? cat.accentColor.opacity(0.6) : .clear,
+                            color: idx == dotIndex ? Color.white.opacity(0.5) : .clear,
                             radius: 3
                         )
                         .animation(.easeInOut(duration: 0.3), value: selectedTab)
-                        .onTapGesture { selectedTab = idx }
+                        .onTapGesture { selectedTab = idx + 1 }
                 }
             }
             .padding(.top, 8)
         }
         .background(Color.bg)
+        #if DEBUG
         .sheet(isPresented: $showDebugSheet) {
-            DebugSheetView(userLocation: userLocation, heading: heading, snapshot: screenSnapshots[selectedTab])
+            DebugSheetView(userLocation: userLocation, heading: heading, snapshot: screenSnapshots[circularCategories[selectedTab]])
         }
+        #endif
     }
+
+
 }
 
 // MARK: - Star Rating
@@ -238,7 +282,7 @@ struct ArrowView: View {
         }
         .frame(width: 64, height: 64)
         .rotationEffect(.degrees(bearing))
-        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: bearing)
+        .animation(.spring(response: 0.55, dampingFraction: 0.42), value: bearing)
     }
 }
 
@@ -353,11 +397,12 @@ struct CategoryPageView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            Color.bg.ignoresSafeArea()
+            accentColor.ignoresSafeArea()
 
             if isLoading {
                 loadingView
                     .padding(.bottom, peekH)
+                skeletonDrawer
             } else if let closest = currentPlace {
                 loadedView(closest)
                     .padding(.bottom, peekH)
@@ -396,22 +441,22 @@ struct CategoryPageView: View {
     private func loadedView(_ place: Place) -> some View {
         let inManhattan = LocationManager.isInManhattan(userLocation)
         let mins = (inManhattan ? directionsResult?.durationMinutes : nil) ?? place.walkingMinutes(from: userLocation)
+        let direction = place.cardinalDirection(from: userLocation).uppercased()
+        let status: String = {
+            let s = place.isOpen ? "OPEN" : "CLOSED"
+            if let label = place.hoursLabel { return "\(s) · \(label)" }
+            return s
+        }()
 
         VStack(spacing: 0) {
             Spacer(minLength: 0)
 
-            // Hero emoji / icon
+            // Hero image
             Group {
-                if category == .bec {
-                    Image("bec-icon")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: 160, maxHeight: 160)
-                } else {
-                    Text(category.emoji)
-                        .font(.system(size: 130))
-                        .lineLimit(1)
-                }
+                Image(category.iconName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: category.iconMaxSize, maxHeight: category.iconMaxSize)
             }
             .id(category.id)
             .transition(.scale(scale: 0.5).combined(with: .opacity))
@@ -419,118 +464,125 @@ struct CategoryPageView: View {
 
             Spacer(minLength: 0)
 
-            // Arrow + walk time + direction
-            HStack(alignment: .center, spacing: 18) {
-                ArrowView(bearing: displayBearing(for: place), color: accentColor)
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("\(mins)")
-                        .font(.custom("Cooper Black", size: 96))
-                        .foregroundStyle(accentColor)
-                        .kerning(-4)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                    Text("min walk")
-                        .font(.system(size: 10, weight: .bold))
-                        .tracking(3.5)
-                        .foregroundStyle(accentColor.opacity(0.55))
-                    Text(place.cardinalDirection(from: userLocation).uppercased())
-                        .font(.custom("Cooper Black", size: 24))
-                        .tracking(3)
-                        .foregroundStyle(accentColor)
-                        .padding(.top, 2)
-                }
+            // Walk time — owns the screen
+            Text("\(mins)")
+                .font(.custom("Cooper Black", size: 148))
+                .foregroundStyle(category.onAccentColor)
+                .kerning(-6)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .multilineTextAlignment(.center)
+
+            Text("MIN WALK")
+                .font(.system(size: 11, weight: .black))
+                .tracking(6)
+                .foregroundStyle(category.onAccentColor.opacity(0.55))
+                .padding(.top, 4)
+
+            // Arrow + direction centered together
+            HStack(spacing: 12) {
+                ArrowView(bearing: displayBearing(for: place), color: category.onAccentColor)
+                Text(direction)
+                    .font(.custom("Cooper Black", size: 32))
+                    .tracking(3)
+                    .foregroundStyle(category.onAccentColor)
             }
-            .padding(.horizontal, 32)
+            .padding(.top, 10)
 
             Spacer(minLength: 0)
 
-            // Place name + address
-            VStack(spacing: 4) {
+            // Place name + status — pinned near drawer
+            VStack(spacing: 3) {
                 Text(place.name.uppercased())
-                    .font(.custom("Cooper Black", size: 18))
-                    .tracking(0.5)
-                    .foregroundStyle(Color.textMain)
+                    .font(.system(size: 13, weight: .black))
+                    .tracking(1.5)
+                    .foregroundStyle(category.onAccentColor.opacity(0.85))
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
-                Text({
-                    let status = place.isOpen ? "OPEN" : "CLOSED"
-                    if let label = place.hoursLabel { return "\(status) · \(label)" }
-                    return status
-                }())
-                    .font(.system(size: 11, weight: .semibold))
-                    .tracking(2)
-                    .foregroundStyle(place.isOpen ? accentColor.opacity(0.75) : Color.textMuted)
+                Text(status)
+                    .font(.system(size: 10, weight: .semibold))
+                    .tracking(2.5)
+                    .foregroundStyle(place.isOpen ? category.onAccentColor.opacity(0.6) : category.onAccentColor.opacity(0.35))
                     .lineLimit(1)
-                if let rating = place.rating {
-                    StarRatingView(rating: rating, color: accentColor)
-                        .padding(.top, 2)
-                }
+            }
+            .padding(.horizontal, 32)
+            .padding(.bottom, 28)
+        }
+    }
+
+    private var skeletonDrawer: some View {
+        VStack(spacing: 0) {
+            Capsule()
+                .fill(accentColor.opacity(0.5))
+                .frame(width: 36, height: 3)
+                .padding(.top, 10)
+                .padding(.bottom, 6)
+            HStack {
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(Color.white.opacity(0.07))
+                    .frame(width: 140, height: 9)
+                Spacer()
+                Text("▲")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.textMuted.opacity(0.4))
             }
             .padding(.horizontal, 24)
-
-            Spacer(minLength: 0)
+            .padding(.vertical, 10)
+            .padding(.bottom, 4)
+            Spacer()
         }
+        .frame(height: 510)
+        .background(Color.drawerBg)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .shadow(color: .black.opacity(0.5), radius: 40, y: -8)
+        .offset(y: 510 - 96)
     }
 
     private var loadingView: some View {
         ZStack {
-            // Ghost layout — mirrors loadedView's exact spacer structure so the icon
-            // lands at the same pixel position when the transition fires.
+            // Ghost layout mirrors loadedView structure so emoji lands at the same position on transition.
             VStack(spacing: 0) {
                 Spacer(minLength: 0)
                 Group {
-                    if category == .bec {
-                        Image("bec-icon")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(maxWidth: 160, maxHeight: 160)
-                    } else {
-                        Text(category.emoji)
-                            .font(.system(size: 130))
-                            .lineLimit(1)
-                    }
+                    Image(category.iconName)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: category.iconMaxSize, maxHeight: category.iconMaxSize)
                 }
                 .frame(maxWidth: .infinity)
                 Spacer(minLength: 0)
-                HStack(alignment: .center, spacing: 18) {
-                    Canvas { _, _ in }.frame(width: 64, height: 64)
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("00")
-                            .font(.custom("Cooper Black", size: 96))
-                            .kerning(-4)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.6)
-                        Text("min walk")
-                            .font(.system(size: 10, weight: .bold))
-                            .tracking(3.5)
-                        Text("N")
-                            .font(.custom("Cooper Black", size: 24))
-                            .tracking(3)
-                            .padding(.top, 2)
-                    }
-                }
-                .padding(.horizontal, 32)
-                .hidden()
+                Text("00")
+                    .font(.custom("Cooper Black", size: 148))
+                    .kerning(-6)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                Text("MIN WALK")
+                    .font(.system(size: 11, weight: .black))
+                    .tracking(6)
+                    .padding(.top, 4)
+                Text("N")
+                    .font(.custom("Cooper Black", size: 32))
+                    .tracking(3)
+                    .padding(.top, 10)
                 Spacer(minLength: 0)
-                VStack(spacing: 4) {
+                VStack(spacing: 3) {
                     Text("PLACE NAME")
-                        .font(.system(size: 18, weight: .bold))
-                        .tracking(0.5)
+                        .font(.system(size: 13, weight: .black))
+                        .tracking(1.5)
                         .lineLimit(2)
                     Text("OPEN")
-                        .font(.system(size: 11, weight: .semibold))
-                        .tracking(2)
-                    StarRatingView(rating: 4.0, color: accentColor)
-                        .padding(.top, 2)
+                        .font(.system(size: 10, weight: .semibold))
+                        .tracking(2.5)
                 }
-                .padding(.horizontal, 24)
-                .hidden()
+                .padding(.horizontal, 32)
                 Spacer(minLength: 0)
             }
+            .hidden()
 
             Text(category.loadingText)
                 .font(.system(.subheadline).italic())
-                .foregroundStyle(Color.textMuted)
+                .foregroundStyle(category.onAccentColor.opacity(0.65))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
         }
@@ -539,13 +591,13 @@ struct CategoryPageView: View {
 
     private var noResultsView: some View {
         VStack(spacing: 16) {
-            Text("NOWHERE NEARBY")
+            Text("NO \(category.label) NEARBY")
                 .font(.custom("Cooper Black", size: 12))
                 .tracking(4)
-                .foregroundStyle(accentColor)
-            Text("Nothing within a 15 min walk.")
+                .foregroundStyle(category.onAccentColor)
+            Text(category.noResultsText)
                 .font(.system(.body, design: .serif))
-                .foregroundStyle(Color.textMain.opacity(0.5))
+                .foregroundStyle(category.onAccentColor.opacity(0.65))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
         }
@@ -613,6 +665,7 @@ struct DrawerView: View {
     @State private var targetOffset: CGFloat
     @State private var reviewPage = 0
     @State private var showAbout = false
+    @State private var showFeedback = false
 
     init(
         isOpen: Binding<Bool>,
@@ -640,7 +693,7 @@ struct DrawerView: View {
         VStack(spacing: 0) {
             // Handle bar
             Capsule()
-                .fill(Color.white.opacity(0.1))
+                .fill(accentColor.opacity(0.5))
                 .frame(width: 36, height: 3)
                 .padding(.top, 10)
                 .padding(.bottom, 6)
@@ -679,19 +732,16 @@ struct DrawerView: View {
         .frame(height: drawerH)
         .background(Color.drawerBg)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        // Full-width MTA line bar at top edge
-        .overlay(alignment: .top) {
-            Rectangle()
-                .fill(accentColor)
-                .frame(height: 3)
-        }
         .shadow(color: .black.opacity(0.5), radius: 40, y: -8)
         .offset(y: targetOffset)
         .sheet(isPresented: $showAbout) {
             AboutView(onContinue: { showAbout = false })
         }
+        .sheet(isPresented: $showFeedback) {
+            FeedbackView(onDismiss: { showFeedback = false })
+        }
         .onChange(of: isOpen) { open in
-            withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.7)) {
                 targetOffset = open ? 0 : closedY
             }
         }
@@ -706,7 +756,7 @@ struct DrawerView: View {
                 }
                 .onEnded { value in
                     let dy = value.translation.height
-                    withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) {
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.7)) {
                         if !isOpen && dy < -60 {
                             isOpen = true; targetOffset = 0
                         } else if isOpen && dy > 60 {
@@ -865,7 +915,7 @@ struct DrawerView: View {
                    action: { showAbout = true })
         settingRow("💬", "Feedback",        "Complaints filed in order of spiciness.",
                    bg: Color(red: 232/255, green: 93/255, blue: 4/255).opacity(0.1),
-                   action: openFeedback)
+                   action: { showFeedback = true })
         settingRow("🔒", "Privacy Policy",  "What we do (and don't) with your data.",
                    bg: Color.white.opacity(0.05),
                    action: openPrivacyPolicy)
@@ -912,16 +962,7 @@ struct DrawerView: View {
     }
 
     private func openPrivacyPolicy() {
-        // TODO: replace with live GitHub Pages URL before submitting to App Store
         if let url = URL(string: "https://yotamdror.github.io/bec-privacy/") {
-            UIApplication.shared.open(url)
-        }
-    }
-
-    private func openFeedback() {
-        let address = "yotamedror@gmail.com"
-        let subject = "BEC App Feedback".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        if let url = URL(string: "mailto:\(address)?subject=\(subject)") {
             UIApplication.shared.open(url)
         }
     }

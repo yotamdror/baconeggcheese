@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { checkRateLimit } from "../_shared/rateLimit.ts";
 
 const GOOGLE_PLACES_API_KEY = Deno.env.get("GOOGLE_PLACES_API_KEY") ?? "";
 const PLACES_BASE = "https://places.googleapis.com/v1";
@@ -104,6 +105,10 @@ function computeHoursLabel(openingHours: Record<string, unknown> | null | undefi
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: CORS_HEADERS });
+  }
+
+  if (!checkRateLimit(req, 20)) {
+    return jsonError("Too many requests", 429);
   }
 
   try {
@@ -244,7 +249,7 @@ async function logUsageEvent(event: {
 }) {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     await fetch(`${supabaseUrl}/rest/v1/usage_events`, {
       method: "POST",
       headers: {
