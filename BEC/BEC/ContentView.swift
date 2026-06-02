@@ -382,6 +382,7 @@ struct CategoryPageView: View {
 
     @State private var places: [Place] = []
     @State private var isLoading = true
+    @State private var isLoadingDirections = false
     @State private var directionsResult: DirectionsResult?
     @State private var selectedPlace: Place?
     @State private var drawerOpen = false
@@ -440,7 +441,11 @@ struct CategoryPageView: View {
     @ViewBuilder
     private func loadedView(_ place: Place) -> some View {
         let inManhattan = LocationManager.isInManhattan(userLocation)
-        let mins = (inManhattan ? directionsResult?.durationMinutes : nil) ?? place.walkingMinutes(from: userLocation)
+        let mins: Int? = {
+            if !inManhattan { return place.walkingMinutes(from: userLocation) }
+            if isLoadingDirections { return nil }
+            return directionsResult?.durationMinutes ?? place.walkingMinutes(from: userLocation)
+        }()
         let direction = place.cardinalDirection(from: userLocation).uppercased()
         let status: String = {
             let s = place.isOpen ? "OPEN" : "CLOSED"
@@ -465,7 +470,7 @@ struct CategoryPageView: View {
             Spacer(minLength: 0)
 
             // Walk time — owns the screen
-            Text("\(mins)")
+            Text(mins.map { "\($0)" } ?? "–")
                 .font(.custom("Cooper Black", size: 148))
                 .foregroundStyle(category.onAccentColor)
                 .kerning(-6)
@@ -620,9 +625,13 @@ struct CategoryPageView: View {
         selectedPlace = place
         drawerOpen = false
         directionsResult = nil
+        isLoadingDirections = true
         Task {
             let result = await DirectionsService.fetch(origin: userLocation, destination: place)
-            await MainActor.run { directionsResult = result }
+            await MainActor.run {
+                directionsResult = result
+                isLoadingDirections = false
+            }
         }
     }
 
@@ -631,15 +640,15 @@ struct CategoryPageView: View {
         directionsResult = nil
         selectedPlace = nil
         places = (try? await PlacesService.fetch(category: category, location: userLocation)) ?? []
+        if let closest = places.first {
+            let result = await DirectionsService.fetch(origin: userLocation, destination: closest)
+            await MainActor.run { directionsResult = result }
+        }
         await MainActor.run {
             withAnimation(.spring(response: 0.42, dampingFraction: 0.75)) {
                 isLoading = false
             }
             fireSnapshot()
-        }
-        if let closest = places.first {
-            let result = await DirectionsService.fetch(origin: userLocation, destination: closest)
-            await MainActor.run { directionsResult = result }
         }
     }
 }
