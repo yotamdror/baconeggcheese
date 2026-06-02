@@ -8,9 +8,31 @@
 
 /* Begin PBXBuildFile section */
 		787C1ACC2FA653FE00D99C03 /* bec.tip.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 787C1ACB2FA653FE00D99C03 /* bec.tip.storekit */; };
+		AA000000000000000000AA0D /* BECWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AA000000000000000000AA01 /* BECWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		AA000000000000000000AA0C /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				AA000000000000000000AA0D /* BECWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXContainerItemProxy section */
+		AA000000000000000000AA0A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7894EE0F2F9D53C200668DC9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA000000000000000000AA02;
+			remoteInfo = BECWidget;
+		};
 		7894EE282F9D53C600668DC9 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 7894EE0F2F9D53C200668DC9 /* Project object */;
@@ -30,11 +52,17 @@
 /* Begin PBXFileReference section */
 		787C1ACB2FA653FE00D99C03 /* bec.tip.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = bec.tip.storekit; sourceTree = "<group>"; };
 		7894EE172F9D53C200668DC9 /* BEC.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BEC.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA000000000000000000AA01 /* BECWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BECWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		7894EE272F9D53C600668DC9 /* BECTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BECTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7894EE312F9D53C600668DC9 /* BECUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BECUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		AA000000000000000000AA06 /* BECWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = BECWidget;
+			sourceTree = "<group>";
+		};
 		7894EE192F9D53C200668DC9 /* BEC */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = BEC;
@@ -53,6 +81,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		AA000000000000000000AA04 /* Frameworks (widget) */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		7894EE142F9D53C200668DC9 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -82,6 +117,7 @@
 			children = (
 				787C1ACB2FA653FE00D99C03 /* bec.tip.storekit */,
 				7894EE192F9D53C200668DC9 /* BEC */,
+				AA000000000000000000AA06 /* BECWidget */,
 				7894EE2A2F9D53C600668DC9 /* BECTests */,
 				7894EE342F9D53C600668DC9 /* BECUITests */,
 				7894EE182F9D53C200668DC9 /* Products */,
@@ -92,6 +128,7 @@
 			isa = PBXGroup;
 			children = (
 				7894EE172F9D53C200668DC9 /* BEC.app */,
+				AA000000000000000000AA01 /* BECWidget.appex */,
 				7894EE272F9D53C600668DC9 /* BECTests.xctest */,
 				7894EE312F9D53C600668DC9 /* BECUITests.xctest */,
 			);
@@ -101,6 +138,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		AA000000000000000000AA02 /* BECWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA000000000000000000AA09 /* Build configuration list for PBXNativeTarget "BECWidget" */;
+			buildPhases = (
+				AA000000000000000000AA03 /* Sources */,
+				AA000000000000000000AA04 /* Frameworks */,
+				AA000000000000000000AA05 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				AA000000000000000000AA06 /* BECWidget */,
+			);
+			name = BECWidget;
+			packageProductDependencies = (
+			);
+			productName = BECWidget;
+			productReference = AA000000000000000000AA01 /* BECWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		7894EE162F9D53C200668DC9 /* BEC */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 7894EE3B2F9D53C600668DC9 /* Build configuration list for PBXNativeTarget "BEC" */;
@@ -108,10 +167,12 @@
 				7894EE132F9D53C200668DC9 /* Sources */,
 				7894EE142F9D53C200668DC9 /* Frameworks */,
 				7894EE152F9D53C200668DC9 /* Resources */,
+				AA000000000000000000AA0C /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				AA000000000000000000AA0B /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				7894EE192F9D53C200668DC9 /* BEC */,
@@ -182,6 +243,9 @@
 					7894EE162F9D53C200668DC9 = {
 						CreatedOnToolsVersion = 16.2;
 					};
+					AA000000000000000000AA02 = {
+						CreatedOnToolsVersion = 16.2;
+					};
 					7894EE262F9D53C600668DC9 = {
 						CreatedOnToolsVersion = 16.2;
 						TestTargetID = 7894EE162F9D53C200668DC9;
@@ -207,6 +271,7 @@
 			projectRoot = "";
 			targets = (
 				7894EE162F9D53C200668DC9 /* BEC */,
+				AA000000000000000000AA02 /* BECWidget */,
 				7894EE262F9D53C600668DC9 /* BECTests */,
 				7894EE302F9D53C600668DC9 /* BECUITests */,
 			);
@@ -214,6 +279,13 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		AA000000000000000000AA05 /* Resources (widget) */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		7894EE152F9D53C200668DC9 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -239,6 +311,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		AA000000000000000000AA03 /* Sources (widget) */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		7894EE132F9D53C200668DC9 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -263,6 +342,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		AA000000000000000000AA0B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA000000000000000000AA02 /* BECWidget */;
+			targetProxy = AA000000000000000000AA0A /* PBXContainerItemProxy */;
+		};
 		7894EE292F9D53C600668DC9 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 7894EE162F9D53C200668DC9 /* BEC */;
@@ -397,11 +481,56 @@
 			};
 			name = Release;
 		};
+		AA000000000000000000AA07 /* Debug (BECWidget) */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "BECWidget/BECWidget.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 75PCHQHB7R;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = BECWidget;
+				INFOPLIST_KEY_NSExtension_NSExtensionPointIdentifier = "com.apple.widgetkit-extension";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.dror.BEC.widget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		AA000000000000000000AA08 /* Release (BECWidget) */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "BECWidget/BECWidget.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 75PCHQHB7R;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = BECWidget;
+				INFOPLIST_KEY_NSExtension_NSExtensionPointIdentifier = "com.apple.widgetkit-extension";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.dror.BEC.widget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		7894EE3C2F9D53C600668DC9 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "BEC/BEC.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"BEC/Preview Content\"";
@@ -434,6 +563,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "BEC/BEC.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"BEC/Preview Content\"";
@@ -532,6 +662,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		AA000000000000000000AA09 /* Build configuration list for PBXNativeTarget "BECWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA000000000000000000AA07 /* Debug */,
+				AA000000000000000000AA08 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		7894EE122F9D53C200668DC9 /* Build configuration list for PBXProject "BEC" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

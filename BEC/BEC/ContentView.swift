@@ -1,6 +1,7 @@
 import SwiftUI
 import CoreLocation
 import UIKit
+import WidgetKit
 
 // MARK: - Design System
 
@@ -640,6 +641,12 @@ struct CategoryPageView: View {
         directionsResult = nil
         selectedPlace = nil
         places = (try? await PlacesService.fetch(category: category, location: userLocation)) ?? []
+        if let closest = places.first, let data = try? JSONEncoder().encode(closest) {
+            let defaults = UserDefaults(suiteName: "group.com.dror.BEC")
+            defaults?.set(data, forKey: "widgetResult_\(category.rawValue)")
+            defaults?.set(Date(), forKey: "widgetUpdated_\(category.rawValue)")
+            WidgetCenter.shared.reloadTimelines(ofKind: "BECWidget")
+        }
         if let closest = places.first {
             let result = await DirectionsService.fetch(origin: userLocation, destination: closest)
             await MainActor.run { directionsResult = result }
