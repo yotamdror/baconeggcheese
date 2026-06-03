@@ -13,3 +13,6 @@ DerivedData/
 
 # Supabase local
 supabase/.temp/
+
+# macOS
+.DS_Store
