@@ -122,7 +122,11 @@ iPhone (SwiftUI)
                               Rate limiting · block math · hours labels · usage logging
 ```
 
-The Supabase edge functions act as an authenticated proxy: API keys stay off the device, per-IP rate limiting is enforced, and the block math runs server-side so the Swift client stays simple. Usage events log the category and a rounded coordinate (3 decimal places ≈ 111 m precision) with no user identity attached.
+The Supabase edge functions act as an authenticated proxy: API keys stay off the device, per-IP rate limiting is enforced, and the block math runs server-side so the Swift client stays simple.
+
+### Usage analytics (branch `success-metrics`)
+
+Anonymous funnel events — no accounts, no device IDs, coordinates rounded to ~111 m. See [Success funnel](#success-funnel) below.
 
 ## QA tooling
 
@@ -156,6 +160,41 @@ iOS:     18.5
 ```
 
 During development the workflow was: notice a wrong direction in the field → shake → Copy Report → paste into Claude Code mobile → fix the polygon or the grid offset. The debug sheet made it practical to close bugs from a phone without ever opening Xcode.
+
+## Future iterations
+
+Not on `main` yet — each item is scoped to a branch until it's ready to ship.
+
+| Idea | Branch | Notes |
+|------|--------|-------|
+| Save a spot for later | — | Bookmark a usual bodega / bagel / slice without re-searching |
+| Home Screen widget | `origin/claude/homescreen-widget-food-0gonX` | Cache-first timeline; no background Places/Directions polling |
+| Share result | `share-button` | Small, subtle share control + App Store link in shared text |
+| Success funnel analytics | `success-metrics` | This branch — deploy migration + `log-usage-event` before shipping |
+
+## Success funnel
+
+Event types stored in `usage_events` (privacy: approximate lat/lng only):
+
+| Tier | `event_type` | When |
+|------|----------------|------|
+| Upstream | `places_search` | Server, after Google Places returns (raw count) |
+| **Minimum** | `result_loaded` | Client, after open-only filter; `result_count` = places shown |
+| **Strong** | `drawer_open` | User expands the drawer |
+| **Strong** | `alternate_selected` | User picks a non-default nearby option |
+| **Best** | `navigate_tapped` | User opens Apple/Google Maps from the drawer |
+| Acquisition | `share_tapped` | Reserved for when `share-button` merges |
+
+Example weekly conversion (same approximate cell, same category, 7 days):
+
+```sql
+select
+  count(*) filter (where event_type = 'result_loaded' and result_count > 0) as minimum_success,
+  count(*) filter (where event_type in ('drawer_open', 'alternate_selected')) as strong_engagement,
+  count(*) filter (where event_type = 'navigate_tapped') as best_success
+from usage_events
+where created_at > now() - interval '7 days';
+```
 
 ## Stack
 

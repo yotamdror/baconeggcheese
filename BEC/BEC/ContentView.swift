@@ -622,6 +622,9 @@ struct CategoryPageView: View {
     }
 
     private func selectPlace(_ place: Place) {
+        if place.id != places.first?.id {
+            UsageEventLogger.log(.alternateSelected, category: category, location: userLocation)
+        }
         selectedPlace = place
         drawerOpen = false
         directionsResult = nil
@@ -640,6 +643,7 @@ struct CategoryPageView: View {
         directionsResult = nil
         selectedPlace = nil
         places = (try? await PlacesService.fetch(category: category, location: userLocation)) ?? []
+        UsageEventLogger.log(.resultLoaded, category: category, location: userLocation, resultCount: places.count)
         if let closest = places.first {
             let result = await DirectionsService.fetch(origin: userLocation, destination: closest)
             await MainActor.run { directionsResult = result }
@@ -750,6 +754,9 @@ struct DrawerView: View {
             FeedbackView(onDismiss: { showFeedback = false })
         }
         .onChange(of: isOpen) { open in
+            if open {
+                UsageEventLogger.log(.drawerOpen, category: category, location: userLocation)
+            }
             withAnimation(.spring(response: 0.32, dampingFraction: 0.7)) {
                 targetOffset = open ? 0 : closedY
             }
@@ -981,6 +988,7 @@ struct DrawerView: View {
     }
 
     private func navigate() {
+        UsageEventLogger.log(.navigateTapped, category: category, location: userLocation)
         let lat = place.location.latitude
         let lng = place.location.longitude
         let q = place.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""

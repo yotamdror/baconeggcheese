@@ -7,3 +7,6 @@ verify_jwt = false  # Public endpoint — iOS app calls without user auth
 
 [functions.submit-feedback]
 verify_jwt = false  # Public endpoint — iOS app calls without user auth
+
+[functions.log-usage-event]
+verify_jwt = false  # Anonymous funnel events — no user accounts

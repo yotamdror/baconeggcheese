@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
+import { insertUsageEvent } from "../_shared/usageEvent.ts";
 
 const GOOGLE_PLACES_API_KEY = Deno.env.get("GOOGLE_PLACES_API_KEY") ?? "";
 const PLACES_BASE = "https://places.googleapis.com/v1";
@@ -142,7 +143,13 @@ serve(async (req) => {
         reviews: pickAllReviews(place.reviews, category),
       }));
 
-    logUsageEvent({ category, latitude, longitude, resultCount: places.length });
+    insertUsageEvent({
+      event_type: "places_search",
+      category,
+      latitude,
+      longitude,
+      result_count: places.length,
+    }).catch(() => {});
 
     return new Response(JSON.stringify({ places }), {
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
@@ -241,31 +248,3 @@ function jsonError(message: string, status: number) {
   });
 }
 
-async function logUsageEvent(event: {
-  category: string;
-  latitude: number;
-  longitude: number;
-  resultCount: number;
-}) {
-  try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-    await fetch(`${supabaseUrl}/rest/v1/usage_events`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: supabaseKey,
-        Authorization: `Bearer ${supabaseKey}`,
-        Prefer: "return=minimal",
-      },
-      body: JSON.stringify({
-        category: event.category,
-        result_count: event.resultCount,
-        lat_approx: Math.round(event.latitude * 1000) / 1000,
-        lng_approx: Math.round(event.longitude * 1000) / 1000,
-      }),
-    });
-  } catch {
-    // Non-critical — swallow
-  }
-}
