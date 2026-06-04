@@ -396,6 +396,8 @@ struct CategoryPageView: View {
         String(format: "%.3f,%.3f", userLocation.coordinate.latitude, userLocation.coordinate.longitude)
     }
 
+    private static let appStoreURL = "https://apps.apple.com/app/id6746823487"
+
     var body: some View {
         ZStack(alignment: .bottom) {
             accentColor.ignoresSafeArea()
@@ -427,9 +429,43 @@ struct CategoryPageView: View {
                     .padding(.bottom, peekH)
             }
         }
+        .overlay(alignment: .topTrailing) {
+            if !isLoading, let place = currentPlace {
+                ShareLink(item: shareText(for: place)) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(category.onAccentColor.opacity(0.32))
+                        .frame(width: 28, height: 28)
+                        .contentShape(Rectangle())
+                }
+                .padding(.top, 54)
+                .padding(.trailing, 14)
+            }
+        }
         .task(id: locationKey) { await load() }
         .onChange(of: currentPlace?.id) { fireSnapshot() }
         .onChange(of: directionsResult?.durationMinutes) { fireSnapshot() }
+    }
+
+    private func shareText(for place: Place) -> String {
+        let inManhattan = LocationManager.isInManhattan(userLocation)
+        let mins = {
+            if !inManhattan { return place.walkingMinutes(from: userLocation) }
+            return directionsResult?.durationMinutes ?? place.walkingMinutes(from: userLocation)
+        }()
+        let direction = place.cardinalDirection(from: userLocation)
+        var lines = ["\(place.name) — \(mins) min walk \(direction)"]
+        if FeatureFlags.blockCalculator, inManhattan,
+           let blocks = directionsResult?.blockDescription, !blocks.isEmpty {
+            lines.append(blocks)
+        }
+        if let label = place.hoursLabel {
+            lines.append(place.isOpen ? "Open · \(label)" : "Closed · \(label)")
+        }
+        lines.append("")
+        lines.append("Bacon Egg & Cheese — NYC's closest bite")
+        lines.append(Self.appStoreURL)
+        return lines.joined(separator: "\n")
     }
 
     private func displayBearing(for place: Place) -> Double {

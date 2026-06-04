@@ -157,6 +157,22 @@ iOS:     18.5
 
 During development the workflow was: notice a wrong direction in the field → shake → Copy Report → paste into Claude Code mobile → fix the polygon or the grid offset. The debug sheet made it practical to close bugs from a phone without ever opening Xcode.
 
+## Future iterations
+
+- **Save a spot for later** — Bookmark a place (usual bodega, bagel shop, slice spot) so you can jump back without running a fresh search. Useful for “I’ll hit this one tomorrow” or a commute default that isn’t always the geographically closest pin.
+- **Home Screen widget** — Glanceable walk time and direction; refresh from cache when the main app runs, with an optional manual reload (see `origin/claude/homescreen-widget-food-0gonX` for a cache-first timeline that avoids background Places/Directions calls).
+
+## Future iterations
+
+Not on `main` yet — each item is scoped to a branch (or remote branch) until it's ready to ship.
+
+| Idea | Branch | Notes |
+|------|--------|-------|
+| Save a spot for later | — | Bookmark a usual bodega / bagel / slice without re-searching |
+| Home Screen widget | `origin/claude/homescreen-widget-food-0gonX` | Cache-first timeline; no background Places/Directions polling |
+| Share result | `share-button` | Small, subtle share control + App Store link in shared text |
+| Success funnel analytics | `success-metrics` | Anonymous usage events (no accounts); see branch README |
+
 ## Stack
 
 - **iOS**: Swift, SwiftUI, CoreLocation
