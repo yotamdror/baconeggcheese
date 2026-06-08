@@ -26,7 +26,7 @@ struct ManualLocationView: View {
                     .padding(.top, 72)
                     .padding(.bottom, 16)
 
-                Text("Type a NYC address\nor neighborhood")
+                Text("Enter an address,\ncross street, or landmark")
                     .font(.custom("Cooper Black", size: 26))
                     .foregroundStyle(Color.textMain)
                     .multilineTextAlignment(.center)
