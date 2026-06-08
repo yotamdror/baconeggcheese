@@ -50,6 +50,9 @@ struct ContentView: View {
     @StateObject private var tipStore = TipStore()
     @AppStorage("hasSeenAbout") private var hasSeenAbout = false
     @AppStorage("hasSeenOutsideNYCWarning") private var hasSeenOutsideNYCWarning = false
+    // Set when the user picks a location by hand (Location Services unavailable).
+    @State private var manualLocation: CLLocation?
+    @State private var showManualEntry = false
 
     var body: some View {
         ZStack {
@@ -59,27 +62,55 @@ struct ContentView: View {
                     hasSeenAbout = true
                     locationManager.requestPermission()
                 })
+            } else if let manual = manualLocation {
+                // Manual location has no device heading — fall back to absolute bearings.
+                mainView(for: manual, heading: nil)
             } else {
                 switch locationManager.authorizationStatus {
                 case .notDetermined:
-                    ProgressView().tint(Color.textMain)
+                    waitingView
                 case .denied, .restricted:
-                    NoLocationView()
+                    ManualLocationView(onPick: { manualLocation = $0 })
                 default:
                     if let loc = locationManager.location {
-                        if !hasSeenOutsideNYCWarning && !LocationManager.isInManhattan(loc) {
-                            OutsideNYCView(onContinue: { hasSeenOutsideNYCWarning = true })
-                        } else {
-                            MainView(userLocation: loc, heading: locationManager.heading)
-                        }
+                        mainView(for: loc, heading: locationManager.heading)
                     } else {
-                        ProgressView().tint(Color.textMain)
+                        waitingView
                     }
                 }
             }
         }
         .animation(.default, value: locationManager.authorizationStatus)
         .environmentObject(tipStore)
+        .fullScreenCover(isPresented: $showManualEntry) {
+            ManualLocationView(onPick: { loc in
+                manualLocation = loc
+                showManualEntry = false
+            })
+        }
+    }
+
+    @ViewBuilder
+    private func mainView(for loc: CLLocation, heading: CLLocationDirection?) -> some View {
+        if !hasSeenOutsideNYCWarning && !LocationManager.isInManhattan(loc) {
+            OutsideNYCView(onContinue: { hasSeenOutsideNYCWarning = true })
+        } else {
+            MainView(userLocation: loc, heading: heading)
+        }
+    }
+
+    // Shown while waiting for permission or a GPS fix — with a manual escape hatch
+    // so the user is never stuck if location never arrives.
+    private var waitingView: some View {
+        VStack(spacing: 28) {
+            ProgressView().tint(Color.textMain)
+            Button(action: { showManualEntry = true }) {
+                Text("Enter address manually")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.textMuted)
+                    .underline()
+            }
+        }
     }
 }
 
@@ -114,43 +145,6 @@ struct PermissionView: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 52)
         }
-    }
-}
-
-// MARK: - No Location
-
-struct NoLocationView: View {
-    var body: some View {
-        VStack(spacing: 0) {
-            Spacer()
-            Text("NO LOCATION")
-                .font(.custom("Cooper Black", size: 12))
-                .tracking(4)
-                .foregroundStyle(Category.bec.accentColor)
-                .padding(.bottom, 16)
-            Text("Only way to find the closest bite is to know where you are first")
-                .font(.custom("Cooper Black", size: 20))
-                .foregroundStyle(Color.textMain.opacity(0.6))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-            Spacer()
-            Button(action: openSettings) {
-                Text("OPEN SETTINGS")
-                    .font(.system(.subheadline, weight: .black))
-                    .tracking(2)
-                    .foregroundStyle(Color.bg)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 18)
-                    .background(Category.bec.accentColor)
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 52)
-        }
-    }
-
-    private func openSettings() {
-        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
-        UIApplication.shared.open(url)
     }
 }
 
@@ -1071,13 +1065,6 @@ private let mockBagelPlaces: [Place] = [
     ZStack {
         Color(red: 14/255, green: 12/255, blue: 10/255).ignoresSafeArea()
         PermissionView {}
-    }
-}
-
-#Preview("No Location") {
-    ZStack {
-        Color(red: 14/255, green: 12/255, blue: 10/255).ignoresSafeArea()
-        NoLocationView()
     }
 }
 

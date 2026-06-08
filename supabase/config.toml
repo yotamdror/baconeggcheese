@@ -5,5 +5,8 @@
 [functions.places-proxy]
 verify_jwt = false  # Public endpoint — iOS app calls without user auth
 
+[functions.geocode-proxy]
+verify_jwt = false  # Public endpoint — iOS app calls without user auth
+
 [functions.submit-feedback]
 verify_jwt = false  # Public endpoint — iOS app calls without user auth
