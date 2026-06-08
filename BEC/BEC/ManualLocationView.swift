@@ -37,7 +37,7 @@ struct ManualLocationView: View {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Color.textMuted)
-                    TextField("", text: $query, prompt: Text("e.g. Times Square, 1 World Trade")
+                    TextField("", text: $query, prompt: Text("e.g. Broadway & 42nd, the Moonstruck house")
                         .foregroundColor(Color.textMuted.opacity(0.5)))
                         .font(.system(size: 15))
                         .foregroundStyle(Color.textMain)
