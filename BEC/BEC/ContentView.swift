@@ -641,7 +641,37 @@ struct CategoryPageView: View {
     }
 
     private var noResultsView: some View {
-        Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+
+            // Food icon — dimmed to signal nothing's open right now
+            Image(category.iconName)
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: category.iconMaxSize, maxHeight: category.iconMaxSize)
+                .grayscale(1)
+                .opacity(0.35)
+                .frame(maxWidth: .infinity)
+
+            Spacer(minLength: 0)
+
+            VStack(spacing: 10) {
+                Text("NOTHING OPEN")
+                    .font(.custom("Cooper Black", size: 40))
+                    .tracking(1)
+                    .foregroundStyle(category.onAccentColor)
+                    .multilineTextAlignment(.center)
+                Text(category.noResultsText)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(category.onAccentColor.opacity(0.55))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 48)
+            }
+
+            Spacer(minLength: 0)
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func fireSnapshot() {
