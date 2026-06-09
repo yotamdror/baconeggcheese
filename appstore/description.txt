@@ -4,6 +4,6 @@ Built specifically for New York City.
 
 Swipe between three categories — BEC, bagel, pizza. The app finds the nearest spot and tells you exactly how many minutes away it is, with a compass arrow pointing you there.
 
-Tap the drawer for the address, a mini map, and walking directions. Real reviews from people who've actually been there.
+Tap the drawer for the address, a mini map, and walking directions.
 
 Works best in Manhattan. Works everywhere, though.

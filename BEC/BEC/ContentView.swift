@@ -68,14 +68,14 @@ struct ContentView: View {
             } else {
                 switch locationManager.authorizationStatus {
                 case .notDetermined:
-                    waitingView
+                    ProgressView().tint(Color.textMain)
                 case .denied, .restricted:
-                    ManualLocationView(onPick: { manualLocation = $0 })
+                    noLocationView
                 default:
                     if let loc = locationManager.location {
                         mainView(for: loc, heading: locationManager.heading)
                     } else {
-                        waitingView
+                        GPSWaitingView(onEnterManually: { showManualEntry = true })
                     }
                 }
             }
@@ -99,17 +99,68 @@ struct ContentView: View {
         }
     }
 
-    // Shown while waiting for permission or a GPS fix — with a manual escape hatch
-    // so the user is never stuck if location never arrives.
-    private var waitingView: some View {
-        VStack(spacing: 28) {
-            ProgressView().tint(Color.textMain)
+    // Shown when location is denied/restricted — Settings as primary, manual entry as fallback.
+    private var noLocationView: some View {
+        VStack(spacing: 0) {
+            Spacer()
+            Text("LOCATION OFF")
+                .font(.custom("Cooper Black", size: 12))
+                .tracking(4)
+                .foregroundStyle(Category.bec.accentColor)
+                .padding(.bottom, 16)
+            Text("Enable location so we can find the closest bite")
+                .font(.custom("Cooper Black", size: 20))
+                .foregroundStyle(Color.textMain.opacity(0.6))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+            Spacer()
+            Button(action: {
+                guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+                UIApplication.shared.open(url)
+            }) {
+                Text("OPEN SETTINGS")
+                    .font(.system(.subheadline, weight: .black))
+                    .tracking(2)
+                    .foregroundStyle(Color.bg)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(Category.bec.accentColor)
+            }
+            .padding(.horizontal, 24)
             Button(action: { showManualEntry = true }) {
                 Text("Enter address manually")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color.textMuted)
                     .underline()
+                    .padding(.vertical, 16)
             }
+            .padding(.bottom, 36)
+        }
+    }
+}
+
+// Spinner while GPS resolves — reveals "Enter address manually" after 6 s if still stuck.
+private struct GPSWaitingView: View {
+    let onEnterManually: () -> Void
+    @State private var showEscapeHatch = false
+
+    var body: some View {
+        VStack(spacing: 28) {
+            ProgressView().tint(Color.textMain)
+            if showEscapeHatch {
+                Button(action: onEnterManually) {
+                    Text("Enter address manually")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.textMuted)
+                        .underline()
+                }
+                .transition(.opacity)
+            }
+        }
+        .animation(.default, value: showEscapeHatch)
+        .task {
+            try? await Task.sleep(nanoseconds: 6_000_000_000)
+            showEscapeHatch = true
         }
     }
 }
@@ -419,6 +470,7 @@ struct CategoryPageView: View {
             } else {
                 noResultsView
                     .padding(.bottom, peekH)
+                EmptyDrawerView(category: category, accentColor: accentColor)
             }
         }
         .task(id: locationKey) { await load() }
@@ -589,18 +641,7 @@ struct CategoryPageView: View {
     }
 
     private var noResultsView: some View {
-        VStack(spacing: 16) {
-            Text("NO \(category.label) NEARBY")
-                .font(.custom("Cooper Black", size: 12))
-                .tracking(4)
-                .foregroundStyle(category.onAccentColor)
-            Text(category.noResultsText)
-                .font(.system(.body, design: .serif))
-                .foregroundStyle(category.onAccentColor.opacity(0.65))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func fireSnapshot() {
@@ -804,49 +845,52 @@ struct DrawerView: View {
         .buttonStyle(.plain)
         .padding(.bottom, 8)
 
-        // Reviews
-        let allReviews = place.reviews ?? (place.highlightedReview.map { [$0] } ?? [])
-        if !allReviews.isEmpty {
-            sectionHeader("Word on the street")
+        // FEATURE FLAG: reviews hidden — set to true to re-enable
+        let reviewsEnabled = false
+        if reviewsEnabled {
+            let allReviews = place.reviews ?? (place.highlightedReview.map { [$0] } ?? [])
+            if !allReviews.isEmpty {
+                sectionHeader("Word on the street")
 
-            let review = allReviews[min(reviewPage, allReviews.count - 1)]
-            VStack(alignment: .leading, spacing: 5) {
-                Text("\u{201C}\(review.text)\u{201D}")
-                    .font(.system(size: 13).italic())
-                    .foregroundStyle(Color.textMuted)
-                    .lineSpacing(4)
-                Text("— \(review.author.uppercased())")
-                    .font(.system(size: 10, weight: .regular))
-                    .tracking(2)
-                    .foregroundStyle(Color.textDim)
+                let review = allReviews[min(reviewPage, allReviews.count - 1)]
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("\u{201C}\(review.text)\u{201D}")
+                        .font(.system(size: 13).italic())
+                        .foregroundStyle(Color.textMuted)
+                        .lineSpacing(4)
+                    Text("— \(review.author.uppercased())")
+                        .font(.system(size: 10, weight: .regular))
+                        .tracking(2)
+                        .foregroundStyle(Color.textDim)
 
-                if allReviews.count > 1 {
-                    HStack(spacing: 5) {
-                        ForEach(0..<allReviews.count, id: \.self) { i in
-                            Circle()
-                                .fill(i == reviewPage ? accentColor : Color.textDim)
-                                .frame(width: 4, height: 4)
-                        }
-                    }
-                    .padding(.top, 6)
-                }
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 20)
-            .gesture(
-                DragGesture(minimumDistance: 20)
-                    .onEnded { value in
-                        guard abs(value.translation.width) > abs(value.translation.height) else { return }
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            if value.translation.width < 0 {
-                                reviewPage = min(reviewPage + 1, allReviews.count - 1)
-                            } else {
-                                reviewPage = max(reviewPage - 1, 0)
+                    if allReviews.count > 1 {
+                        HStack(spacing: 5) {
+                            ForEach(0..<allReviews.count, id: \.self) { i in
+                                Circle()
+                                    .fill(i == reviewPage ? accentColor : Color.textDim)
+                                    .frame(width: 4, height: 4)
                             }
                         }
+                        .padding(.top, 6)
                     }
-            )
-            .onChange(of: place.id) { reviewPage = 0 }
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 20)
+                .gesture(
+                    DragGesture(minimumDistance: 20)
+                        .onEnded { value in
+                            guard abs(value.translation.width) > abs(value.translation.height) else { return }
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                if value.translation.width < 0 {
+                                    reviewPage = min(reviewPage + 1, allReviews.count - 1)
+                                } else {
+                                    reviewPage = max(reviewPage - 1, 0)
+                                }
+                            }
+                        }
+                )
+                .onChange(of: place.id) { reviewPage = 0 }
+            }
         }
 
         // Inline more options
@@ -913,33 +957,34 @@ struct DrawerView: View {
     private var settingsSection: some View {
         Color.divider.frame(height: 1)
 
-        settingRow("🗽", "About",            "Built for New York. Works best there too.",
-                   bg: Category.bec.accentColor.opacity(0.12),
+        settingRow("info.circle", "About",          "Built for New York. Works best there too.",
                    action: { showAbout = true })
-        settingRow("💬", "Feedback",        "Complaints filed in order of spiciness.",
-                   bg: Color(red: 232/255, green: 93/255, blue: 4/255).opacity(0.1),
+        settingRow("bubble.left", "Feedback",       "Complaints filed in order of spiciness.",
                    action: { showFeedback = true })
-        settingRow("🔒", "Privacy Policy",  "What we do (and don't) with your data.",
-                   bg: Color.white.opacity(0.05),
+        settingRow("lock", "Privacy Policy",        "What we do (and don't) with your data.",
                    action: openPrivacyPolicy)
         settingRow(
-            "☕",
-            tipStore.purchased ? "Thank you ☕" : "Buy me a coffee",
+            "cup.and.saucer",
+            tipStore.purchased ? "Thank you" : "Pay me",
             tipStore.purchased ? "You're the best. Really." :
-                tipStore.isPurchasing ? "Opening…" : "Support the developer. Optional but appreciated.",
-            bg: Color(red: 212/255, green: 43/255, blue: 39/255).opacity(0.1),
-            action: tipStore.purchased || tipStore.isPurchasing ? nil : { Task { await tipStore.purchase() } }
+                tipStore.isPurchasing ? "Opening…" :
+                tipStore.product == nil ? "Loading…" :
+                "Because it would make me happy.",
+            action: tipStore.purchased || tipStore.isPurchasing || tipStore.product == nil
+                ? nil
+                : { Task { await tipStore.purchase() } }
         )
     }
 
-    private func settingRow(_ icon: String, _ label: String, _ sub: String, bg: Color, action: (() -> Void)? = nil) -> some View {
+    private func settingRow(_ systemImage: String, _ label: String, _ sub: String, action: (() -> Void)? = nil) -> some View {
         VStack(spacing: 0) {
             Button(action: { action?() }) {
                 HStack(spacing: 14) {
-                    Text(icon)
-                        .font(.system(size: 16))
+                    Image(systemName: systemImage)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.textMuted)
                         .frame(width: 34, height: 34)
-                        .background(bg)
+                        .background(Color.white.opacity(0.06))
                         .cornerRadius(8)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(label)
@@ -951,8 +996,8 @@ struct DrawerView: View {
                             .foregroundStyle(Color.textMuted)
                     }
                     Spacer()
-                    Text("›")
-                        .font(.system(size: 14))
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(action != nil ? Color.textMuted.opacity(0.3) : .clear)
                 }
                 .padding(.horizontal, 24)
@@ -988,6 +1033,85 @@ struct DrawerView: View {
     }
 }
 
+
+// MARK: - Empty Drawer
+
+private struct EmptyDrawerView: View {
+    let category: Category
+    let accentColor: Color
+
+    private let peekH:   CGFloat = 96
+    private let drawerH: CGFloat = 510
+    private var closedY: CGFloat { drawerH - peekH }
+
+    @State private var isOpen = false
+    @State private var targetOffset: CGFloat = 510 - 96
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Capsule()
+                .fill(accentColor.opacity(0.5))
+                .frame(width: 36, height: 3)
+                .padding(.top, 10)
+                .padding(.bottom, 6)
+
+            // Peek row
+            Button(action: toggle) {
+                HStack {
+                    Text("No open locations within a 15 min walk")
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(Color.textMuted)
+                        .lineLimit(1)
+                    Spacer()
+                    Text("▲")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.textMuted.opacity(0.4))
+                        .rotationEffect(.degrees(isOpen ? 180 : 0))
+                        .animation(.easeInOut(duration: 0.3), value: isOpen)
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 10)
+                .padding(.bottom, 4)
+            }
+
+            Color.divider.frame(height: 1)
+
+            // Expanded content
+            VStack(spacing: 0) {
+                Spacer()
+                Text("We couldn't find anywhere open selling \(category.label.lowercased()) right now. Sorry.")
+                    .font(.system(size: 15))
+                    .foregroundStyle(Color.textMuted)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+                Spacer()
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .frame(height: drawerH)
+        .background(Color.drawerBg)
+        .offset(y: targetOffset)
+        .gesture(
+            DragGesture()
+                .onEnded { value in
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.7)) {
+                        if value.translation.height < -40 { open() }
+                        else if value.translation.height > 40 { close() }
+                    }
+                }
+        )
+        .buttonStyle(.plain)
+    }
+
+    private func toggle() {
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.7)) {
+            isOpen ? close() : open()
+        }
+    }
+
+    private func open()  { isOpen = true;  targetOffset = 0 }
+    private func close() { isOpen = false; targetOffset = closedY }
+}
 
 // MARK: - Preview Helpers
 

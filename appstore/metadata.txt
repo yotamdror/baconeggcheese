@@ -2,7 +2,7 @@ App Name:     Bacon Egg & Cheese
 Subtitle:     NYC's Closest Bite
 Bundle ID:    com.dror.BEC
 Category:     Food & Drink
-Version:      1.0 (Build 1)
+Version:      0.1 (Build 2)
 
 Support URL:  https://yotamdror.github.io/bec-privacy/
 Privacy URL:  https://yotamdror.github.io/bec-privacy/
@@ -13,6 +13,7 @@ Description:  see description.txt
 Keywords:     see keywords.txt (100 char max — trim if needed)
 
 Review Notes for Apple:
-  This app requires location permission to find the nearest food spots.
-  It is built for New York City but works globally.
+  Location is used to find the nearest food spot. The app now remains fully
+  functional without Location Services — users are shown a manual address
+  search screen so they can still use the app anywhere.
   Test account not required — the app uses the device location only.

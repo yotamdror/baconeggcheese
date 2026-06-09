@@ -4,7 +4,7 @@ import SwiftUI
 @MainActor
 final class TipStore: ObservableObject {
     // Must match the product ID you create in App Store Connect
-    static let productID = "bec.tip.coffee"
+    static let productID = "bec.support"
 
     @Published var product: Product?
     @Published var isPurchasing = false

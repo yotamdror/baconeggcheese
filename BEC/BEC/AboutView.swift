@@ -17,22 +17,23 @@ struct AboutView: View {
                     .frame(width: 110, height: 110)
                     .padding(.bottom, 32)
 
-                Text("ONLY IN NEW YORK")
+                Text("BUILT FOR NEW YORK CITY")
                     .font(.system(size: 11, weight: .black))
                     .tracking(3)
                     .foregroundStyle(Category.bec.accentColor)
                     .padding(.bottom, 16)
 
-                Text("The best is\nthe closest to you.")
+                Text("Just get whatever\nis closest.")
                     .font(.custom("Cooper Black", size: 34))
                     .foregroundStyle(Color.textMain)
                     .multilineTextAlignment(.center)
                     .padding(.bottom, 24)
 
                 VStack(alignment: .leading, spacing: 14) {
-                    aboutLine("People wonder — where do I get a slice, a bagel, a bacon egg and cheese? The answer is usually the closest one to you.")
-                    aboutLine("This app was built specifically for NYC.")
-                    aboutLine("There probably isn't a bagel at 11pm in Paris, or a bacon egg and cheese in Islamabad.")
+                    aboutLine("People often wonder — where should I get a slice, a bagel, a bacon egg and cheese? You don't think so hard and we keep things simple.")
+                    aboutLine("This app was built for and tested in NYC, and will only search for open options within a 15 min walk.")
+                    aboutLine("Good luck finding a BEC a 15 min walk away at 2am in Islamabad...")
+                    aboutLine("Bing Bong.")
                 }
                 .padding(.horizontal, 36)
 

@@ -8,12 +8,12 @@
       "internalID" : "bec_tip_coffee_001",
       "localizations" : [
         {
-          "description" : "Support the developer. Optional but appreciated.",
+          "description" : "Not that a coffee costs $0.99...",
           "displayName" : "Buy Me a Coffee",
           "locale" : "en_US"
         }
       ],
-      "productID" : "bec.tip.coffee",
+      "productID" : "bec.support",
       "referenceName" : "Coffee Tip",
       "type" : "Consumable"
     }
