@@ -452,6 +452,7 @@ struct CategoryPageView: View {
                 loadingView
                     .padding(.bottom, peekH)
                 skeletonDrawer
+                    .transition(.identity)
             } else if let closest = currentPlace {
                 loadedView(closest)
                     .padding(.bottom, peekH)
@@ -469,11 +470,13 @@ struct CategoryPageView: View {
                     onSelectPlace: selectPlace
                 )
                 .id("\(category.id)-\(closest.id)")
+                .transition(.identity)
                 .onChange(of: currentPlace?.id) { drawerOpen = false }
             } else {
                 noResultsView
                     .padding(.bottom, peekH)
                 EmptyDrawerView(category: category, accentColor: accentColor)
+                    .transition(.identity)
             }
         }
         .task(id: locationKey) { await load() }
