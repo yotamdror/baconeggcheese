@@ -1127,6 +1127,8 @@ private struct EmptyDrawerView: View {
         }
         .frame(height: drawerH)
         .background(Color.drawerBg)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .shadow(color: .black.opacity(0.5), radius: 40, y: -8)
         .offset(y: targetOffset)
         .gesture(
             DragGesture()
