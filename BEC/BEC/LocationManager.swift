@@ -31,6 +31,10 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
         guard let newLocation = locations.last else { return }
         if let current = location, current.distance(from: newLocation) < 200 { return }
         location = newLocation
+        if let defaults = UserDefaults(suiteName: "group.com.dror.BEC") {
+            defaults.set(newLocation.coordinate.latitude,  forKey: "widgetLastLatitude")
+            defaults.set(newLocation.coordinate.longitude, forKey: "widgetLastLongitude")
+        }
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
