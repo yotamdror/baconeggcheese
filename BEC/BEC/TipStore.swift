@@ -25,9 +25,15 @@ final class TipStore: ObservableObject {
             if attempt > 0 {
                 try? await Task.sleep(nanoseconds: UInt64(attempt) * 1_000_000_000)
             }
-            if let found = try? await Product.products(for: [Self.productID]).first {
-                product = found
-                return
+            do {
+                let products = try await Product.products(for: [Self.productID])
+                if let found = products.first {
+                    product = found
+                    return
+                }
+                print("TipStore: empty result for '\(Self.productID)' (attempt \(attempt + 1))")
+            } catch {
+                print("TipStore: Product.products threw \(error) (attempt \(attempt + 1))")
             }
         }
         loadFailed = true

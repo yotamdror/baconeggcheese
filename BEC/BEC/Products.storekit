@@ -1,10 +1,22 @@
 {
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
+      {
+        "locale" : "en_US",
+        "policyText" : "",
+        "policyURL" : ""
+      }
+    ]
+  },
   "identifier" : "BEC",
-  "nonConsumableProducts" : [],
-  "consumableProducts" : [
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
     {
-      "displayPrice" : "1.99",
-      "familySharable" : false,
+      "displayPrice" : "0.99",
+      "familyShareable" : false,
       "internalID" : "bec_tip_coffee_001",
       "localizations" : [
         {
@@ -18,11 +30,25 @@
       "type" : "Consumable"
     }
   ],
-  "autoRenewableSubscriptions" : [],
-  "nonRenewingSubscriptions" : [],
-  "settings" : {},
+  "settings" : {
+    "_askToBuyEnabled" : false,
+    "_billingGracePeriodEnabled" : false,
+    "_billingIssuesEnabled" : false,
+    "_disableDialogs" : false,
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_renewalBillingIssuesEnabled" : false,
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+
+    ],
+    "_timeRate" : 0
+  },
+  "subscriptionGroups" : [
+
+  ],
   "version" : {
-    "major" : 2,
+    "major" : 5,
     "minor" : 0
   }
 }
