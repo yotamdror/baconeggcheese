@@ -68,7 +68,10 @@ struct ContentView: View {
             } else {
                 switch locationManager.authorizationStatus {
                 case .notDetermined:
-                    ProgressView().tint(Color.textMain)
+                    // If Location Services are off system-wide, requestWhenInUseAuthorization()
+                    // never prompts and this status can stay .notDetermined forever — give the
+                    // same GPS-timeout escape hatch to manual entry so the app isn't a dead end.
+                    GPSWaitingView(onEnterManually: { showManualEntry = true })
                 case .denied, .restricted:
                     noLocationView
                 default:
@@ -998,9 +1001,10 @@ struct DrawerView: View {
             tipStore.purchased ? "Thank you" : "Pay me",
             tipStore.purchased ? "You're the best. Really." :
                 tipStore.isPurchasing ? "Opening…" :
+                tipStore.loadFailed ? "Couldn't connect — tap to retry" :
                 tipStore.product == nil ? "Loading…" :
-                "Because it would make me happy.",
-            action: tipStore.purchased || tipStore.isPurchasing || tipStore.product == nil
+                tipStore.purchaseError ?? "Because it would make me happy.",
+            action: tipStore.purchased || tipStore.isPurchasing || (tipStore.product == nil && !tipStore.loadFailed)
                 ? nil
                 : { Task { await tipStore.purchase() } }
         )
