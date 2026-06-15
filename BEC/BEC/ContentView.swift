@@ -47,7 +47,6 @@ extension Category {
 
 struct ContentView: View {
     @StateObject private var locationManager = LocationManager()
-    @StateObject private var tipStore = TipStore()
     @AppStorage("hasSeenAbout") private var hasSeenAbout = false
     @AppStorage("hasSeenOutsideNYCWarning") private var hasSeenOutsideNYCWarning = false
     // Set when the user picks a location by hand (Location Services unavailable).
@@ -84,7 +83,6 @@ struct ContentView: View {
             }
         }
         .animation(.default, value: locationManager.authorizationStatus)
-        .environmentObject(tipStore)
         .fullScreenCover(isPresented: $showManualEntry) {
             ManualLocationView(onPick: { loc in
                 manualLocation = loc
@@ -142,7 +140,7 @@ struct ContentView: View {
     }
 }
 
-// Spinner while GPS resolves — reveals "Enter address manually" after 6 s if still stuck.
+// Spinner while GPS resolves — reveals "Enter address manually" after 1.5 s if still stuck.
 private struct GPSWaitingView: View {
     let onEnterManually: () -> Void
     @State private var showEscapeHatch = false
@@ -162,7 +160,7 @@ private struct GPSWaitingView: View {
         }
         .animation(.default, value: showEscapeHatch)
         .task {
-            try? await Task.sleep(nanoseconds: 6_000_000_000)
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
             showEscapeHatch = true
         }
     }
@@ -736,8 +734,6 @@ struct DrawerView: View {
     let directionsResult: DirectionsResult?
     let onSelectPlace: (Place) -> Void
 
-    @EnvironmentObject private var tipStore: TipStore
-
     private let peekH:   CGFloat = 96
     private let drawerH: CGFloat = 510
     private var closedY: CGFloat { drawerH - peekH }
@@ -999,18 +995,6 @@ struct DrawerView: View {
                    action: { showFeedback = true })
         settingRow("lock", "Privacy Policy",        "What we do (and don't) with your data.",
                    action: openPrivacyPolicy)
-        settingRow(
-            "cup.and.saucer",
-            tipStore.purchased ? "Thank you" : "Pay me",
-            tipStore.purchased ? "You're the best. Really." :
-                tipStore.isPurchasing ? "Opening…" :
-                tipStore.loadFailed ? "Couldn't connect — tap to retry" :
-                tipStore.product == nil ? "Loading…" :
-                tipStore.purchaseError ?? "Because it would make me happy.",
-            action: tipStore.purchased || tipStore.isPurchasing || (tipStore.product == nil && !tipStore.loadFailed)
-                ? nil
-                : { Task { await tipStore.purchase() } }
-        )
     }
 
     private func settingRow(_ systemImage: String, _ label: String, _ sub: String, action: (() -> Void)? = nil) -> some View {
@@ -1234,17 +1218,14 @@ private let mockBagelPlaces: [Place] = [
 #if DEBUG
 #Preview("BEC – Loaded") {
     CategoryPageView(category: .bec, userLocation: previewLocation, heading: 30, onSnapshot: { _ in }, previewPlaces: mockBECPlaces)
-        .environmentObject(TipStore())
 }
 
 #Preview("Pizza – Loaded") {
     CategoryPageView(category: .pizza, userLocation: previewLocation, heading: 30, onSnapshot: { _ in }, previewPlaces: mockPizzaPlaces)
-        .environmentObject(TipStore())
 }
 
 #Preview("Bagel – Loaded") {
     CategoryPageView(category: .bagel, userLocation: previewLocation, heading: 30, onSnapshot: { _ in }, previewPlaces: mockBagelPlaces)
-        .environmentObject(TipStore())
 }
 #endif
 
@@ -1263,7 +1244,6 @@ private let mockBagelPlaces: [Place] = [
             onSelectPlace: { _ in },
             startFullyOpen: true
         )
-        .environmentObject(TipStore())
     }
 }
 
@@ -1281,7 +1261,6 @@ private let mockBagelPlaces: [Place] = [
             onSelectPlace: { _ in },
             startFullyOpen: true
         )
-        .environmentObject(TipStore())
     }
 }
 
@@ -1299,7 +1278,6 @@ private let mockBagelPlaces: [Place] = [
             onSelectPlace: { _ in },
             startFullyOpen: true
         )
-        .environmentObject(TipStore())
     }
 }
 #endif

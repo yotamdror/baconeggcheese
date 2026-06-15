@@ -40,7 +40,7 @@ struct AboutView: View {
                 Spacer()
 
                 Button(action: onContinue) {
-                    Text("LET'S GO KNICKS")
+                    Text("LET'S GO")
                         .font(.system(.subheadline, weight: .black))
                         .tracking(2)
                         .foregroundStyle(Color.bg)
