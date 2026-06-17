@@ -58,7 +58,7 @@ struct PlacesResponse: Decodable {
     let places: [Place]?
 }
 
-struct Place: Decodable, Identifiable {
+struct Place: Codable, Identifiable {
     let id: String
     let displayName: DisplayName
     let formattedAddress: String?
@@ -114,8 +114,8 @@ struct Place: Decodable, Identifiable {
         }
     }
 
-    struct DisplayName: Decodable { let text: String }
-    struct Coordinates: Decodable { let latitude: Double; let longitude: Double }
-    struct Hours: Decodable { let openNow: Bool? }
-    struct Review: Decodable { let text: String; let author: String }
+    struct DisplayName: Codable { let text: String }
+    struct Coordinates: Codable { let latitude: Double; let longitude: Double }
+    struct Hours: Codable { let openNow: Bool? }
+    struct Review: Codable { let text: String; let author: String }
 }
