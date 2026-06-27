@@ -70,4 +70,12 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
         }
         return inside
     }
+
+    // Loose bounding box covering all five boroughs, used only to decide whether
+    // someone is in NYC at all (not for the Manhattan-only block-grid logic above).
+    static func isInNYC(_ location: CLLocation) -> Bool {
+        let lat = location.coordinate.latitude
+        let lng = location.coordinate.longitude
+        return (40.477...40.918).contains(lat) && (-74.259...(-73.700)).contains(lng)
+    }
 }

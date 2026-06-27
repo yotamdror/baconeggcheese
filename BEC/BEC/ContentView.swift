@@ -93,7 +93,7 @@ struct ContentView: View {
 
     @ViewBuilder
     private func mainView(for loc: CLLocation, heading: CLLocationDirection?) -> some View {
-        if !hasSeenOutsideNYCWarning && !LocationManager.isInManhattan(loc) {
+        if !hasSeenOutsideNYCWarning && !LocationManager.isInNYC(loc) {
             OutsideNYCView(onContinue: { hasSeenOutsideNYCWarning = true })
         } else {
             MainView(userLocation: loc, heading: heading)

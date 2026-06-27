@@ -85,7 +85,7 @@ struct OutsideNYCView: View {
                     .foregroundStyle(Category.bec.accentColor)
                     .padding(.bottom, 20)
 
-                Text("This thing runs on\nManhattan logic.")
+                Text("This thing only\nknows NYC.")
                     .font(.custom("Cooper Black", size: 30))
                     .foregroundStyle(Color.textMain)
                     .multilineTextAlignment(.center)
